@@ -6,7 +6,6 @@ import java.awt.Graphics2D;
 public class PlayerCharacter extends CharacterEntity {
     private static final int SHOT_SIZE = 10;
     private static final double SHOT_SPEED = 420;
-    private static final double SHOT_COOLDOWN = 0.22;
 
     private double aimX = 1;
     private double aimY;
@@ -14,7 +13,7 @@ public class PlayerCharacter extends CharacterEntity {
     private boolean shooting;
 
     public PlayerCharacter(double x, double y) {
-        super(x, y, 32, 220);
+        super(x, y, 32, 100, 220, 10, 3);
     }
 
     public void setAim(double horizontal, double vertical) {
@@ -43,7 +42,7 @@ public class PlayerCharacter extends CharacterEntity {
             return null;
         }
 
-        shotCooldown = SHOT_COOLDOWN;
+        shotCooldown = 1.0 / getAttackSpeed();
         double startX = x + aimX * (width / 2.0 + SHOT_SIZE);
         double startY = y + aimY * (height / 2.0 + SHOT_SIZE);
         return new Shot(startX, startY, aimX * SHOT_SPEED, aimY * SHOT_SPEED);

@@ -23,6 +23,13 @@ java -cp out game.Main
 - **WASD**: Move
 - **Hold arrow keys**: Shoot in that direction (combine two for diagonal shots)
 
+## Character attributes
+
+The player starts with 100 HP, moves at 220 units per second, deals 10 damage
+per shot, and fires 5 shots per second. HP, speed, damage, and attack speed
+(shots per second) are reusable character attributes; damage is not yet applied
+to anything because enemies are not implemented.
+
 ## Structure
 
 - `GameEntity`: shared base for objects updated and drawn by the game.

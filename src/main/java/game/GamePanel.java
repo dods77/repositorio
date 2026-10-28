@@ -116,6 +116,24 @@ public final class GamePanel extends JPanel {
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         g.drawString("Move: WASD    Hold arrow keys to shoot", 16, 48);
         g.drawString("Shots in room: " + room.getShotCount(), 16, 68);
+        PlayerCharacter player = room.getPlayer();
+        int barX = 16;
+        int barY = 82;
+        int barWidth = 160;
+        int barHeight = 14;
+        g.setColor(new Color(55, 35, 40));
+        g.fillRect(barX, barY, barWidth, barHeight);
+        g.setColor(new Color(205, 65, 75));
+        g.fillRect(barX, barY,
+                barWidth * player.getHealth() / player.getMaxHealth(), barHeight);
+        g.setColor(Color.WHITE);
+        g.drawRect(barX, barY, barWidth, barHeight);
+        g.drawString("HP: " + player.getHealth() + "/" + player.getMaxHealth(),
+                barX + barWidth + 8, barY + 12);
+        g.drawString("Speed: " + player.getMoveSpeed()
+                + "    Damage: " + player.getDamage()
+                + "    Attack: " + player.getAttackSpeed() + " shots/s",
+                16, 118);
         g.dispose();
     }
 }
