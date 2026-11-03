@@ -6,6 +6,7 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Room {
     public enum Exit {
@@ -24,7 +25,7 @@ public class Room {
     private final boolean leftDoor;
     private final boolean rightDoor;
     private final PlayerCharacter player;
-    private Gilberto gilberto;
+    private final List<Gilberto> gilbertos = new ArrayList<>();
     private final List<Shot> shots = new ArrayList<>();
     private final BufferedImage background;
 
@@ -40,8 +41,16 @@ public class Room {
         this.leftDoor = leftDoor;
         this.rightDoor = rightDoor;
         this.player = player;
-        if (type == RoomType.NORMAL) {
-            gilberto = new Gilberto(width - 80, height / 2.0);
+        double[][] spawnPoints = {
+            {width * 0.82, height * 0.32},
+            {width * 0.18, height * 0.32},
+            {width * 0.82, height * 0.68},
+            {width * 0.18, height * 0.68},
+            {width * 0.50, height * 0.18}
+        };
+        int gilbertoCount = ThreadLocalRandom.current().nextInt(1, 6);
+        for (int index = 0; index < gilbertoCount; index++) {
+            gilbertos.add(new Gilberto(spawnPoints[index][0], spawnPoints[index][1]));
         }
         background = createBackground();
     }
@@ -89,9 +98,17 @@ public class Room {
             return exit;
         }
 
-        if (gilberto != null) {
+        for (Gilberto gilberto : gilbertos) {
+            double previousX = gilberto.getX();
+            double previousY = gilberto.getY();
             gilberto.update(deltaSeconds);
             gilberto.moveToward(player, this, deltaSeconds);
+            for (Gilberto other : gilbertos) {
+                if (other != gilberto && overlaps(gilberto, other)) {
+                    gilberto.setPosition(previousX, previousY);
+                    break;
+                }
+            }
             gilberto.tryDamageOnContact(player);
         }
 
@@ -100,17 +117,25 @@ public class Room {
             shots.add(newShot);
         }
 
-        Iterator<Shot> iterator = shots.iterator();
-        while (iterator.hasNext()) {
-            Shot shot = iterator.next();
+        Iterator<Shot> shotIterator = shots.iterator();
+        while (shotIterator.hasNext()) {
+            Shot shot = shotIterator.next();
             shot.update(deltaSeconds);
             if (shot.isOutside(this)) {
-                iterator.remove();
-            } else if (gilberto != null && overlaps(shot, gilberto)) {
-                gilberto.takeDamage(player.getDamage());
-                iterator.remove();
-                if (gilberto.getHealth() == 0) {
-                    gilberto = null;
+                shotIterator.remove();
+                continue;
+            }
+
+            Iterator<Gilberto> gilbertoIterator = gilbertos.iterator();
+            while (gilbertoIterator.hasNext()) {
+                Gilberto gilberto = gilbertoIterator.next();
+                if (overlaps(shot, gilberto)) {
+                    gilberto.takeDamage(player.getDamage());
+                    shotIterator.remove();
+                    if (gilberto.getHealth() == 0) {
+                        gilbertoIterator.remove();
+                    }
+                    break;
                 }
             }
         }
@@ -120,7 +145,7 @@ public class Room {
     public void draw(Graphics2D graphics) {
         graphics.drawImage(background, 0, 0, null);
 
-        if (gilberto != null) {
+        for (Gilberto gilberto : gilbertos) {
             gilberto.draw(graphics);
         }
         for (Shot shot : shots) {
