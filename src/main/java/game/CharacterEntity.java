@@ -59,6 +59,14 @@ public abstract class CharacterEntity extends GameEntity {
         moveY = vertical;
     }
 
+    protected double getMoveX() {
+        return moveX;
+    }
+
+    protected double getMoveY() {
+        return moveY;
+    }
+
     protected void moveWithin(Room room, double deltaSeconds) {
         x += moveX * getMoveSpeed() * deltaSeconds;
         y += moveY * getMoveSpeed() * deltaSeconds;

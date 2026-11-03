@@ -21,7 +21,7 @@ public final class GamePanel extends JPanel {
     private static final int ROOM_WIDTH = 800;
     private static final int ROOM_HEIGHT = 600;
 
-    private final Room room = new Room(ROOM_WIDTH, ROOM_HEIGHT);
+    private final Dungeon dungeon = new Dungeon(ROOM_WIDTH, ROOM_HEIGHT);
     private final Set<String> pressedKeys = new HashSet<>();
     private final Timer timer;
     private long previousFrameNanos;
@@ -41,7 +41,7 @@ public final class GamePanel extends JPanel {
         double deltaSeconds = Math.min((now - previousFrameNanos) / 1_000_000_000.0, 0.05);
         previousFrameNanos = now;
 
-        PlayerCharacter player = room.getPlayer();
+        PlayerCharacter player = dungeon.getPlayer();
         double horizontal = (isPressed("D") ? 1 : 0) - (isPressed("A") ? 1 : 0);
         double vertical = (isPressed("S") ? 1 : 0) - (isPressed("W") ? 1 : 0);
         player.setMovement(horizontal, vertical);
@@ -53,7 +53,7 @@ public final class GamePanel extends JPanel {
             player.setAim(aimX, aimY);
         }
         player.setShooting(shooting);
-        room.update(deltaSeconds);
+        dungeon.update(deltaSeconds);
         repaint();
     }
 
@@ -109,14 +109,27 @@ public final class GamePanel extends JPanel {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
 
-        room.draw(g);
+        dungeon.draw(g);
         g.setColor(Color.WHITE);
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
         g.drawString("Little Room", 16, 26);
+
+        String roomText = "Room " + dungeon.getCurrentRoomNumber()
+                + " / " + dungeon.getRoomCount();
+        int roomTextWidth = g.getFontMetrics().stringWidth(roomText);
+        g.drawString(roomText, ROOM_WIDTH - 16 - roomTextWidth, 26);
+
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         g.drawString("Move: WASD    Hold arrow keys to shoot", 16, 48);
-        g.drawString("Shots in room: " + room.getShotCount(), 16, 68);
-        PlayerCharacter player = room.getPlayer();
+        if (dungeon.getCurrentRoomType() == RoomType.TREASURE) {
+            g.setColor(new Color(235, 205, 125));
+            String treasureText = dungeon.getCurrentRoomType().getDisplayName();
+            int treasureTextWidth = g.getFontMetrics().stringWidth(treasureText);
+            g.drawString(treasureText, ROOM_WIDTH - 16 - treasureTextWidth, 48);
+            g.setColor(Color.WHITE);
+        }
+        g.drawString("Shots in room: " + dungeon.getShotCount(), 16, 68);
+        PlayerCharacter player = dungeon.getPlayer();
         int barX = 16;
         int barY = 82;
         int barWidth = 160;

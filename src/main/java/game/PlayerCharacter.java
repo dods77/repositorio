@@ -33,8 +33,33 @@ public class PlayerCharacter extends CharacterEntity {
         shotCooldown = Math.max(0, shotCooldown - deltaSeconds);
     }
 
-    public void move(Room room, double deltaSeconds) {
-        moveWithin(room, deltaSeconds);
+    public Room.Exit move(Room room, double deltaSeconds) {
+        double halfWidth = width / 2.0;
+        double halfHeight = height / 2.0;
+        double nextX = x + getMoveX() * getMoveSpeed() * deltaSeconds;
+        double nextY = y + getMoveY() * getMoveSpeed() * deltaSeconds;
+
+        nextY = Math.max(halfHeight,
+                Math.min(room.getHeight() - halfHeight, nextY));
+        boolean inDoorway = Math.abs(nextY - room.getHeight() / 2.0)
+                <= Room.DOOR_HALF_HEIGHT - halfHeight;
+
+        if (nextX < halfWidth && room.hasLeftDoor() && inDoorway) {
+            x = nextX;
+            y = nextY;
+            return Room.Exit.LEFT;
+        }
+        if (nextX > room.getWidth() - halfWidth
+                && room.hasRightDoor() && inDoorway) {
+            x = nextX;
+            y = nextY;
+            return Room.Exit.RIGHT;
+        }
+
+        x = Math.max(halfWidth,
+                Math.min(room.getWidth() - halfWidth, nextX));
+        y = nextY;
+        return Room.Exit.NONE;
     }
 
     public Shot tryShoot() {
