@@ -23,6 +23,7 @@ public class Room {
     private final boolean leftDoor;
     private final boolean rightDoor;
     private final PlayerCharacter player;
+    private Gilberto gilberto;
     private final List<Shot> shots = new ArrayList<>();
 
     public Room(int width, int height, int number, RoomType type,
@@ -37,6 +38,9 @@ public class Room {
         this.leftDoor = leftDoor;
         this.rightDoor = rightDoor;
         this.player = player;
+        if (type == RoomType.NORMAL) {
+            gilberto = new Gilberto(width - 80, height / 2.0);
+        }
     }
 
     public int getWidth() {
@@ -82,6 +86,12 @@ public class Room {
             return exit;
         }
 
+        if (gilberto != null) {
+            gilberto.update(deltaSeconds);
+            gilberto.moveToward(player, this, deltaSeconds);
+            gilberto.tryDamageOnContact(player);
+        }
+
         Shot newShot = player.tryShoot();
         if (newShot != null) {
             shots.add(newShot);
@@ -93,6 +103,12 @@ public class Room {
             shot.update(deltaSeconds);
             if (shot.isOutside(this)) {
                 iterator.remove();
+            } else if (gilberto != null && overlaps(shot, gilberto)) {
+                gilberto.takeDamage(player.getDamage());
+                iterator.remove();
+                if (gilberto.getHealth() == 0) {
+                    gilberto = null;
+                }
             }
         }
         return Exit.NONE;
@@ -135,7 +151,17 @@ public class Room {
         for (Shot shot : shots) {
             shot.draw(graphics);
         }
+        if (gilberto != null) {
+            gilberto.draw(graphics);
+        }
         player.draw(graphics);
+    }
+
+    private boolean overlaps(GameEntity first, GameEntity second) {
+        return Math.abs(first.getX() - second.getX())
+                        <= (first.getWidth() + second.getWidth()) / 2.0
+                && Math.abs(first.getY() - second.getY())
+                        <= (first.getHeight() + second.getHeight()) / 2.0;
     }
 
     private void drawDoor(Graphics2D graphics, int x) {

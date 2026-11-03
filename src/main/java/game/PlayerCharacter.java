@@ -1,9 +1,11 @@
 package game;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 
 public class PlayerCharacter extends CharacterEntity {
+    private static final String NAME = "Isaacaias";
     private static final int SHOT_SIZE = 10;
     private static final double SHOT_SPEED = 420;
 
@@ -82,5 +84,9 @@ public class PlayerCharacter extends CharacterEntity {
         graphics.setColor(new Color(90, 45, 50));
         graphics.fillOval(left + 8, top + 10, 5, 5);
         graphics.fillOval(left + 19, top + 10, 5, 5);
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        graphics.setColor(Color.WHITE);
+        int nameWidth = graphics.getFontMetrics().stringWidth(NAME);
+        graphics.drawString(NAME, (int) Math.round(x) - nameWidth / 2, top - 5);
     }
 }
