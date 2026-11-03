@@ -8,8 +8,6 @@ public final class Dungeon {
     public static final int DEFAULT_ROOM_COUNT = 15;
     public static final int TREASURE_ROOM_INTERVAL = 5;
 
-    private static final double ENTRY_INSET = 44;
-
     private final List<Room> rooms = new ArrayList<>();
     private final PlayerCharacter player;
     private int currentRoomIndex;
@@ -79,9 +77,10 @@ public final class Dungeon {
         currentRoomIndex = nextIndex;
         getCurrentRoom().clearShots();
 
+        double entryInset = Room.WALL_THICKNESS + player.getWidth() / 2.0 + 8;
         double entryX = exit == Room.Exit.RIGHT
-                ? ENTRY_INSET
-                : getCurrentRoom().getWidth() - ENTRY_INSET;
+                ? entryInset
+                : getCurrentRoom().getWidth() - entryInset;
         player.setPosition(entryX, getCurrentRoom().getHeight() / 2.0);
     }
 }

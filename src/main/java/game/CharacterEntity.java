@@ -70,7 +70,9 @@ public abstract class CharacterEntity extends GameEntity {
     protected void moveWithin(Room room, double deltaSeconds) {
         x += moveX * getMoveSpeed() * deltaSeconds;
         y += moveY * getMoveSpeed() * deltaSeconds;
-        x = Math.max(width / 2.0, Math.min(room.getWidth() - width / 2.0, x));
-        y = Math.max(height / 2.0, Math.min(room.getHeight() - height / 2.0, y));
+        x = Math.max(Room.WALL_THICKNESS + width / 2.0,
+                Math.min(room.getWidth() - Room.WALL_THICKNESS - width / 2.0, x));
+        y = Math.max(Room.WALL_THICKNESS + height / 2.0,
+                Math.min(room.getHeight() - Room.WALL_THICKNESS - height / 2.0, y));
     }
 }

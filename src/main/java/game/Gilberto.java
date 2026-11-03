@@ -1,11 +1,15 @@
 package game;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 public final class Gilberto extends CharacterEntity {
     private static final double CONTACT_COOLDOWN = 1.0;
+
     private double contactCooldown;
+    private Facing facing = Facing.LEFT;
+    private double walkTime;
+    private int walkFrame;
 
     public Gilberto(double x, double y) {
         super(x, y, 32, 100, 165, 10, 3);
@@ -22,8 +26,10 @@ public final class Gilberto extends CharacterEntity {
         double distance = Math.hypot(horizontal, vertical);
         if (distance > 0) {
             setMovement(horizontal / distance, vertical / distance);
+            updateFacing(horizontal, vertical, deltaSeconds);
         } else {
             setMovement(0, 0);
+            walkFrame = 0;
             return;
         }
 
@@ -53,12 +59,20 @@ public final class Gilberto extends CharacterEntity {
 
     @Override
     public void draw(Graphics2D graphics) {
-        int left = (int) Math.round(x - width / 2.0);
-        int top = (int) Math.round(y - height / 2.0);
-        graphics.setColor(new Color(200, 65, 75));
-        graphics.fillOval(left, top, width, height);
-        graphics.setColor(new Color(90, 45, 50));
-        graphics.fillOval(left + 8, top + 10, 5, 5);
-        graphics.fillOval(left + 19, top + 10, 5, 5);
+        BufferedImage sprite = Sprites.enemy(facing, walkFrame);
+        int left = (int) Math.round(x - sprite.getWidth() / 2.0);
+        int top = (int) Math.round(y - sprite.getHeight() / 2.0);
+        graphics.drawImage(sprite, left, top, null);
+    }
+
+    private void updateFacing(double horizontal, double vertical,
+            double deltaSeconds) {
+        if (Math.abs(horizontal) >= Math.abs(vertical)) {
+            facing = horizontal < 0 ? Facing.LEFT : Facing.RIGHT;
+        } else {
+            facing = vertical < 0 ? Facing.UP : Facing.DOWN;
+        }
+        walkTime += deltaSeconds;
+        walkFrame = (int) (walkTime * 7) % 2;
     }
 }

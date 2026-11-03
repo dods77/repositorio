@@ -1,7 +1,7 @@
 package game;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 public final class Shot extends GameEntity {
     private final double velocityX;
@@ -26,8 +26,9 @@ public final class Shot extends GameEntity {
 
     @Override
     public void draw(Graphics2D graphics) {
-        graphics.setColor(new Color(255, 225, 125));
-        graphics.fillOval((int) Math.round(x - width / 2.0),
-                (int) Math.round(y - height / 2.0), width, height);
+        BufferedImage sprite = Sprites.SHOT;
+        int left = (int) Math.round(x - sprite.getWidth() / 2.0);
+        int top = (int) Math.round(y - sprite.getHeight() / 2.0);
+        graphics.drawImage(sprite, left, top, null);
     }
 }

@@ -3,6 +3,7 @@ package game;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 public class PlayerCharacter extends CharacterEntity {
     private static final String NAME = "Isaacaias";
@@ -13,6 +14,9 @@ public class PlayerCharacter extends CharacterEntity {
     private double aimY;
     private double shotCooldown;
     private boolean shooting;
+    private Facing facing = Facing.DOWN;
+    private double walkTime;
+    private int walkFrame;
 
     public PlayerCharacter(double x, double y) {
         super(x, y, 32, 100, 220, 10, 3);
@@ -33,6 +37,24 @@ public class PlayerCharacter extends CharacterEntity {
     @Override
     public void update(double deltaSeconds) {
         shotCooldown = Math.max(0, shotCooldown - deltaSeconds);
+
+        double facingX = shooting ? aimX : getMoveX();
+        double facingY = shooting ? aimY : getMoveY();
+        if (Math.abs(facingX) > 0.01 || Math.abs(facingY) > 0.01) {
+            if (Math.abs(facingX) >= Math.abs(facingY)) {
+                facing = facingX < 0 ? Facing.LEFT : Facing.RIGHT;
+            } else {
+                facing = facingY < 0 ? Facing.UP : Facing.DOWN;
+            }
+        }
+
+        if (Math.abs(getMoveX()) > 0.01 || Math.abs(getMoveY()) > 0.01) {
+            walkTime += deltaSeconds;
+            walkFrame = (int) (walkTime * 8) % 2;
+        } else {
+            walkTime = 0;
+            walkFrame = 0;
+        }
     }
 
     public Room.Exit move(Room room, double deltaSeconds) {
@@ -40,26 +62,27 @@ public class PlayerCharacter extends CharacterEntity {
         double halfHeight = height / 2.0;
         double nextX = x + getMoveX() * getMoveSpeed() * deltaSeconds;
         double nextY = y + getMoveY() * getMoveSpeed() * deltaSeconds;
+        double minX = Room.WALL_THICKNESS + halfWidth;
+        double maxX = room.getWidth() - Room.WALL_THICKNESS - halfWidth;
+        double minY = Room.WALL_THICKNESS + halfHeight;
+        double maxY = room.getHeight() - Room.WALL_THICKNESS - halfHeight;
 
-        nextY = Math.max(halfHeight,
-                Math.min(room.getHeight() - halfHeight, nextY));
+        nextY = Math.max(minY, Math.min(maxY, nextY));
         boolean inDoorway = Math.abs(nextY - room.getHeight() / 2.0)
                 <= Room.DOOR_HALF_HEIGHT - halfHeight;
 
-        if (nextX < halfWidth && room.hasLeftDoor() && inDoorway) {
+        if (nextX < minX && room.hasLeftDoor() && inDoorway) {
             x = nextX;
             y = nextY;
             return Room.Exit.LEFT;
         }
-        if (nextX > room.getWidth() - halfWidth
-                && room.hasRightDoor() && inDoorway) {
+        if (nextX > maxX && room.hasRightDoor() && inDoorway) {
             x = nextX;
             y = nextY;
             return Room.Exit.RIGHT;
         }
 
-        x = Math.max(halfWidth,
-                Math.min(room.getWidth() - halfWidth, nextX));
+        x = Math.max(minX, Math.min(maxX, nextX));
         y = nextY;
         return Room.Exit.NONE;
     }
@@ -77,13 +100,11 @@ public class PlayerCharacter extends CharacterEntity {
 
     @Override
     public void draw(Graphics2D graphics) {
-        int left = (int) Math.round(x - width / 2.0);
-        int top = (int) Math.round(y - height / 2.0);
-        graphics.setColor(new Color(235, 190, 160));
-        graphics.fillOval(left, top, width, height);
-        graphics.setColor(new Color(90, 45, 50));
-        graphics.fillOval(left + 8, top + 10, 5, 5);
-        graphics.fillOval(left + 19, top + 10, 5, 5);
+        BufferedImage sprite = Sprites.player(facing, walkFrame);
+        int left = (int) Math.round(x - sprite.getWidth() / 2.0);
+        int top = (int) Math.round(y - sprite.getHeight() / 2.0);
+        graphics.drawImage(sprite, left, top, null);
+
         graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         graphics.setColor(Color.WHITE);
         int nameWidth = graphics.getFontMetrics().stringWidth(NAME);

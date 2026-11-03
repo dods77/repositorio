@@ -108,6 +108,8 @@ public final class GamePanel extends JPanel {
         Graphics2D g = (Graphics2D) graphics.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
         dungeon.draw(g);
         g.setColor(Color.WHITE);
@@ -132,15 +134,16 @@ public final class GamePanel extends JPanel {
         PlayerCharacter player = dungeon.getPlayer();
         int barX = 16;
         int barY = 82;
-        int barWidth = 160;
-        int barHeight = 14;
-        g.setColor(new Color(55, 35, 40));
-        g.fillRect(barX, barY, barWidth, barHeight);
-        g.setColor(new Color(205, 65, 75));
-        g.fillRect(barX, barY,
-                barWidth * player.getHealth() / player.getMaxHealth(), barHeight);
+        int barWidth = Sprites.HUD_BAR_BACKGROUND.getWidth();
+        int barHeight = Sprites.HUD_BAR_BACKGROUND.getHeight();
+        g.drawImage(Sprites.HUD_BAR_BACKGROUND, barX, barY, null);
+        int healthWidth = barWidth * player.getHealth() / player.getMaxHealth();
+        if (healthWidth > 0) {
+            g.drawImage(Sprites.HUD_BAR_FILL,
+                    barX, barY, barX + healthWidth, barY + barHeight,
+                    0, 0, healthWidth, barHeight, null);
+        }
         g.setColor(Color.WHITE);
-        g.drawRect(barX, barY, barWidth, barHeight);
         g.drawString("HP: " + player.getHealth() + "/" + player.getMaxHealth(),
                 barX + barWidth + 8, barY + 12);
         g.drawString("Speed: " + player.getMoveSpeed()

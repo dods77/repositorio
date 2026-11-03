@@ -1,7 +1,8 @@
 package game;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -14,7 +15,7 @@ public class Room {
     }
 
     static final int DOOR_HALF_HEIGHT = 48;
-    private static final int DOOR_DEPTH = 22;
+    static final int WALL_THICKNESS = 20;
 
     private final int width;
     private final int height;
@@ -25,6 +26,7 @@ public class Room {
     private final PlayerCharacter player;
     private Gilberto gilberto;
     private final List<Shot> shots = new ArrayList<>();
+    private final BufferedImage background;
 
     public Room(int width, int height, int number, RoomType type,
             boolean leftDoor, boolean rightDoor, PlayerCharacter player) {
@@ -41,6 +43,7 @@ public class Room {
         if (type == RoomType.NORMAL) {
             gilberto = new Gilberto(width - 80, height / 2.0);
         }
+        background = createBackground();
     }
 
     public int getWidth() {
@@ -115,44 +118,13 @@ public class Room {
     }
 
     public void draw(Graphics2D graphics) {
-        boolean treasureRoom = type == RoomType.TREASURE;
+        graphics.drawImage(background, 0, 0, null);
 
-        graphics.setColor(treasureRoom
-                ? new Color(62, 53, 48)
-                : new Color(48, 48, 62));
-        graphics.fillRect(0, 0, width, height);
-
-        graphics.setColor(treasureRoom
-                ? new Color(72, 62, 55)
-                : new Color(56, 56, 70));
-        for (int x = 40; x < width; x += 40) {
-            graphics.drawLine(x, 0, x, height);
-        }
-        for (int y = 40; y < height; y += 40) {
-            graphics.drawLine(0, y, width, y);
-        }
-
-        graphics.setColor(treasureRoom
-                ? new Color(215, 188, 125)
-                : new Color(190, 170, 145));
-        graphics.drawRect(1, 1, width - 3, height - 3);
-
-        if (leftDoor) {
-            drawDoor(graphics, 0);
-        }
-        if (rightDoor) {
-            drawDoor(graphics, width - DOOR_DEPTH);
-        }
-
-        if (treasureRoom) {
-            drawPedestal(graphics);
-        }
-
-        for (Shot shot : shots) {
-            shot.draw(graphics);
-        }
         if (gilberto != null) {
             gilberto.draw(graphics);
+        }
+        for (Shot shot : shots) {
+            shot.draw(graphics);
         }
         player.draw(graphics);
     }
@@ -164,33 +136,68 @@ public class Room {
                         <= (first.getHeight() + second.getHeight()) / 2.0;
     }
 
-    private void drawDoor(Graphics2D graphics, int x) {
-        int doorTop = height / 2 - DOOR_HALF_HEIGHT;
-        int doorHeight = DOOR_HALF_HEIGHT * 2;
+    private BufferedImage createBackground() {
+        BufferedImage image = new BufferedImage(width, height,
+                BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics = image.createGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
-        graphics.setColor(new Color(24, 22, 30));
-        graphics.fillRect(x, doorTop, DOOR_DEPTH, doorHeight);
+        drawFloor(graphics);
+        drawWalls(graphics);
+        drawDoors(graphics);
+        if (type == RoomType.TREASURE) {
+            drawTreasureDecor(graphics);
+        }
 
-        graphics.setColor(new Color(215, 188, 125));
-        graphics.drawLine(x, doorTop, x + DOOR_DEPTH, doorTop);
-        graphics.drawLine(x, doorTop + doorHeight, x + DOOR_DEPTH,
-                doorTop + doorHeight);
+        graphics.dispose();
+        return image;
     }
 
-    private void drawPedestal(Graphics2D graphics) {
+    private void drawFloor(Graphics2D graphics) {
+        BufferedImage floor = type == RoomType.TREASURE
+                ? Sprites.FLOOR_TREASURE
+                : Sprites.FLOOR_NORMAL;
+        for (int y = 0; y < height; y += floor.getHeight()) {
+            for (int x = 0; x < width; x += floor.getWidth()) {
+                graphics.drawImage(floor, x, y, null);
+            }
+        }
+    }
+
+    private void drawWalls(Graphics2D graphics) {
+        BufferedImage horizontal = Sprites.WALL_HORIZONTAL;
+        for (int x = 0; x < width; x += horizontal.getWidth()) {
+            graphics.drawImage(horizontal, x, 0, null);
+            graphics.drawImage(horizontal, x, height - horizontal.getHeight(), null);
+        }
+
+        BufferedImage vertical = Sprites.WALL_VERTICAL;
+        for (int y = 0; y < height; y += vertical.getHeight()) {
+            graphics.drawImage(vertical, 0, y, null);
+            graphics.drawImage(vertical, width - vertical.getWidth(), y, null);
+        }
+    }
+
+    private void drawDoors(Graphics2D graphics) {
+        int doorY = height / 2 - Sprites.DOOR.getHeight() / 2;
+        if (leftDoor) {
+            graphics.drawImage(Sprites.DOOR, 0, doorY, null);
+        }
+        if (rightDoor) {
+            graphics.drawImage(Sprites.DOOR, width - Sprites.DOOR.getWidth(),
+                    doorY, null);
+        }
+    }
+
+    private void drawTreasureDecor(Graphics2D graphics) {
         int centerX = width / 2;
         int centerY = height / 2;
-
-        graphics.setColor(new Color(28, 24, 24, 110));
-        graphics.fillOval(centerX - 38, centerY + 16, 76, 24);
-
-        graphics.setColor(new Color(112, 101, 89));
-        graphics.fillRoundRect(centerX - 24, centerY - 8, 48, 34, 8, 8);
-
-        graphics.setColor(new Color(154, 140, 121));
-        graphics.fillOval(centerX - 30, centerY - 20, 60, 26);
-
-        graphics.setColor(new Color(220, 200, 160));
-        graphics.drawOval(centerX - 30, centerY - 20, 60, 26);
+        graphics.drawImage(Sprites.TREASURE_RUG,
+                centerX - Sprites.TREASURE_RUG.getWidth() / 2,
+                centerY - Sprites.TREASURE_RUG.getHeight() / 2, null);
+        graphics.drawImage(Sprites.PEDESTAL,
+                centerX - Sprites.PEDESTAL.getWidth() / 2,
+                centerY - Sprites.PEDESTAL.getHeight() / 2, null);
     }
 }
