@@ -1,6 +1,7 @@
 package game;
 
 import java.awt.Graphics2D;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 
 public final class Gilberto extends CharacterEntity {
@@ -21,8 +22,15 @@ public final class Gilberto extends CharacterEntity {
     }
 
     public void moveToward(PlayerCharacter player, Room room, double deltaSeconds) {
-        double horizontal = player.getX() - x;
-        double vertical = player.getY() - y;
+        Point2D.Double waypoint = room.getNextWaypoint(this);
+        if (waypoint == null) {
+            setMovement(0, 0);
+            walkFrame = 0;
+            return;
+        }
+
+        double horizontal = waypoint.x - x;
+        double vertical = waypoint.y - y;
         double distance = Math.hypot(horizontal, vertical);
         if (distance > 0) {
             setMovement(horizontal / distance, vertical / distance);
@@ -33,18 +41,7 @@ public final class Gilberto extends CharacterEntity {
             return;
         }
 
-        double halfWidth = (width + player.getWidth()) / 2.0;
-        double halfHeight = (height + player.getHeight()) / 2.0;
-        double travelToHorizontalContact = Math.abs(horizontal) > halfWidth
-            ? (Math.abs(horizontal) - halfWidth) * distance / Math.abs(horizontal)
-            : 0;
-        double travelToVerticalContact = Math.abs(vertical) > halfHeight
-            ? (Math.abs(vertical) - halfHeight) * distance / Math.abs(vertical)
-            : 0;
-        double travelToContact = Math.max(travelToHorizontalContact,
-            travelToVerticalContact);
-        double movementTime = Math.min(deltaSeconds,
-            travelToContact / getMoveSpeed());
+        double movementTime = Math.min(deltaSeconds, distance / getMoveSpeed());
         moveWithin(room, movementTime);
     }
 
