@@ -3,7 +3,9 @@
 A tiny Java 2D game starter inspired by top-down room-based games. It has one
 playable character and directional shots. The dungeon is a line of 15 rooms:
 you start in the leftmost room and move right through side doors. Every fifth
-room (5, 10, and 15) is a treasure room with an empty pedestal.
+room (5, 10, and 15) is a treasure room with a collectible school item on its
+pedestal. Items have weighted Portuguese rarity tiers and permanently improve
+damage, movement speed, or attack speed when collected.
 
 Normal rooms are guarded by Gilberto, an enemy that chases the player, deals
 contact damage, and can be defeated with shots.
