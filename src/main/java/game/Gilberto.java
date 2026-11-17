@@ -1,5 +1,6 @@
 package game;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
@@ -8,6 +9,9 @@ public final class Gilberto extends CharacterEntity {
     private static final double CONTACT_COOLDOWN = 1.0;
 
     private double contactCooldown;
+    private double sleepTimer;
+    private double rootTimer;
+    private int sleepHitCount;
     private Facing facing = Facing.LEFT;
     private double walkTime;
     private int walkFrame;
@@ -19,9 +23,16 @@ public final class Gilberto extends CharacterEntity {
     @Override
     public void update(double deltaSeconds) {
         contactCooldown = Math.max(0, contactCooldown - deltaSeconds);
+        sleepTimer = Math.max(0, sleepTimer - deltaSeconds);
+        rootTimer = Math.max(0, rootTimer - deltaSeconds);
     }
 
     public void moveToward(PlayerCharacter player, Room room, double deltaSeconds) {
+        if (sleepTimer > 0 || rootTimer > 0) {
+            setMovement(0, 0);
+            walkFrame = 0;
+            return;
+        }
         Point2D.Double waypoint = room.getNextWaypoint(this);
         if (waypoint == null) {
             setMovement(0, 0);
@@ -46,11 +57,33 @@ public final class Gilberto extends CharacterEntity {
     }
 
     public void tryDamageOnContact(PlayerCharacter player) {
+        if (sleepTimer > 0) {
+            return;
+        }
         boolean touching = Math.abs(x - player.getX()) <= (width + player.getWidth()) / 2.0
                 && Math.abs(y - player.getY()) <= (height + player.getHeight()) / 2.0;
         if (touching && contactCooldown <= 0) {
             player.takeDamage(1);
             contactCooldown = CONTACT_COOLDOWN;
+        }
+    }
+
+    public void receiveShot(Shot shot, int damage, int sleepHitsRequired,
+            double sleepDuration, double rootDuration) {
+        if (shot.isSyringe()) {
+            takeDamage(getHealth());
+            return;
+        }
+        takeDamage(damage);
+        if (shot.isSleepShot() && sleepHitsRequired > 0) {
+            sleepHitCount++;
+            if (sleepHitCount >= sleepHitsRequired) {
+                sleepTimer = sleepDuration;
+                sleepHitCount = 0;
+            }
+        }
+        if (shot.isRootShot()) {
+            rootTimer = Math.max(rootTimer, rootDuration);
         }
     }
 
@@ -60,6 +93,15 @@ public final class Gilberto extends CharacterEntity {
         int left = (int) Math.round(x - sprite.getWidth() / 2.0);
         int top = (int) Math.round(y - sprite.getHeight() / 2.0);
         graphics.drawImage(sprite, left, top, null);
+        if (sleepTimer > 0) {
+            graphics.setColor(new Color(100, 210, 255));
+            graphics.drawOval(left - 4, top - 4,
+                    sprite.getWidth() + 8, sprite.getHeight() + 8);
+        } else if (rootTimer > 0) {
+            graphics.setColor(new Color(110, 220, 100));
+            graphics.drawOval(left - 4, top - 4,
+                    sprite.getWidth() + 8, sprite.getHeight() + 8);
+        }
     }
 
     private void updateFacing(double horizontal, double vertical,

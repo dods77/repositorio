@@ -10,7 +10,7 @@ public final class Dungeon {
 
     private final List<Room> rooms = new ArrayList<>();
     private final PlayerCharacter player;
-    private int currentRoomIndex;
+    private int currentRoomIndex = 1;
 
     public Dungeon(int roomWidth, int roomHeight) {
         this(roomWidth, roomHeight, DEFAULT_ROOM_COUNT);
@@ -22,12 +22,14 @@ public final class Dungeon {
         }
 
         player = new PlayerCharacter(roomWidth / 2.0, roomHeight / 2.0);
+        rooms.add(new Room(roomWidth, roomHeight, 0, RoomType.GALLERY,
+                false, true, player));
         for (int number = 1; number <= roomCount; number++) {
             RoomType type = number % TREASURE_ROOM_INTERVAL == 0
                     ? RoomType.TREASURE
                     : RoomType.NORMAL;
             rooms.add(new Room(roomWidth, roomHeight, number, type,
-                    number > 1, number < roomCount, player));
+                    true, number < roomCount, player));
         }
     }
 
@@ -47,6 +49,10 @@ public final class Dungeon {
         return rooms.size();
     }
 
+    public int getNumberedRoomCount() {
+        return rooms.size() - 1;
+    }
+
     public RoomType getCurrentRoomType() {
         return getCurrentRoom().getType();
     }
@@ -60,6 +66,10 @@ public final class Dungeon {
         if (exit != Room.Exit.NONE) {
             moveThroughDoor(exit);
         }
+    }
+
+    public void activateItems() {
+        getCurrentRoom().activateItems();
     }
 
     public void draw(Graphics2D graphics) {

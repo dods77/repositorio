@@ -2,13 +2,18 @@
 
 A tiny Java 2D game starter inspired by top-down room-based games. It has one
 playable character and directional shots. The dungeon is a line of 15 rooms:
-you start in the leftmost room and move right through side doors. Every fifth
-room (5, 10, and 15) is a treasure room with a collectible school item on its
-pedestal. Items have weighted Portuguese rarity tiers and permanently improve
-damage, movement speed, or attack speed when collected.
+you start at the left end and move right through side doors. A gallery room to
+the left of the start displays every item on its own pedestal, like a museum
+of everything the dungeon can drop. Every fifth room (5, 10, and 15) is a
+treasure room with a collectible school item on its pedestal. Items have weighted Portuguese rarity tiers and permanently modify
+damage, movement speed, attack speed, or maximum health when collected. Some
+items also apply a cosmetic effect or have no gameplay effect.
 
 Normal rooms are guarded by Gilberto, an enemy that chases the player, deals
 contact damage, and can be defeated with shots.
+
+For a compact, AI-oriented map of the architecture, systems, and conventions,
+see [`AGENTS.md`](AGENTS.md).
 
 ## Requirements
 
@@ -26,16 +31,40 @@ java -cp out game.Main
 ```
 
 The game art is rendered from PNG sprites in
-`src/main/resources/sprites`. The build step above copies them into `out` so
-they are on the runtime classpath.
+`src/main/resources/sprites`, grouped by what they are:
+
+- `characters/player`: the player walk frames
+- `characters/enemy`: the enemy walk frames
+- `environment`: floors, walls, and doors
+- `props`: pedestal and treasure rug
+- `projectiles`: shot sprite
+- `effects`: melee attack slash sprite
+- `ui`: HUD bar sprites
+
+The build step above copies them into `out` so they are on the runtime
+classpath.
 
 ## Controls
 
 - **WASD**: Move
-- **Hold arrow keys**: Shoot in that direction (combine two for diagonal shots)
+- **Hold arrow keys**: Shoot in that direction (combine two for diagonal shots);
+  with the katana, slash in that direction instead
+- **Space**: Activate items that have an active ability
+
+The katana replaces ranged shots: hold an arrow key to swing in that direction.
+Picking up a different activatable item drops the currently held one nearby.
 
 Walk into the gap in the left or right wall to move to the next room. Shots do
-not carry between rooms.
+not carry between rooms. Walking left from the start room leads to the item
+gallery; touch a pedestal's item to collect it.
+
+Some items add melee attacks, root enemies, leave damaging poison clouds, or
+grant a companion. The razorblade, headphones, and pocket item activate with
+**Space**. The HUD shows the held active item's recharge bar, which turns green
+when ready. The pocket item grants a random passive item and has a 15-second
+cooldown; the razorblade costs 5 HP per activation but cannot reduce the player
+below 1 HP. Melee attacks use the slash sprite at
+`src/main/resources/sprites/effects/melee_slash.png`.
 
 ## Character attributes
 
@@ -54,7 +83,11 @@ per shot, and fires 3 shots per second. HP, speed, damage, and attack speed
 - `Room`: composites the floor, walls, doors, and pedestal sprites, then draws
   the player, enemy, and active shots.
 - `Dungeon`: builds the line of rooms and handles moving between them.
-- `RoomType`: identifies normal and treasure rooms.
+- `RoomType`: identifies normal, treasure, and gallery rooms.
+- `SchoolItem`: shared item behavior and nested classes for each treasure item.
+- `DroneFamiliar`: orbital ranged companion granted by the drone item.
+- `CompanionCat`: follows the player and attacks nearby enemies.
+- `PoisonCloud`: temporary damaging area left by the poison-trail item.
 - `Sprites` and `Facing`: load the PNG sprite set and select the player and
   enemy directional walk frames.
 - `GamePanel` and `Main`: Swing window, controls, and game loop.

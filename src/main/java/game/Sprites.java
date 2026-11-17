@@ -13,16 +13,22 @@ final class Sprites {
     private static final Path SOURCE_SPRITES =
             Path.of("src", "main", "resources", "sprites");
 
-    static final BufferedImage FLOOR_NORMAL = load("floor_normal.png");
-    static final BufferedImage FLOOR_TREASURE = load("floor_treasure.png");
-    static final BufferedImage WALL_HORIZONTAL = load("wall_horizontal.png");
-    static final BufferedImage WALL_VERTICAL = load("wall_vertical.png");
-    static final BufferedImage DOOR = load("door.png");
-    static final BufferedImage PEDESTAL = load("pedestal.png");
-    static final BufferedImage TREASURE_RUG = load("treasure_rug.png");
-    static final BufferedImage SHOT = load("shot.png");
-    static final BufferedImage HUD_BAR_BACKGROUND = load("hud_bar_background.png");
-    static final BufferedImage HUD_BAR_FILL = load("hud_bar_fill.png");
+    static final BufferedImage FLOOR_NORMAL =
+            load("environment/floor_normal.png");
+    static final BufferedImage FLOOR_TREASURE =
+            load("environment/floor_treasure.png");
+    static final BufferedImage WALL_HORIZONTAL =
+            load("environment/wall_horizontal.png");
+    static final BufferedImage WALL_VERTICAL =
+            load("environment/wall_vertical.png");
+    static final BufferedImage DOOR = load("environment/door.png");
+    static final BufferedImage PEDESTAL = load("props/pedestal.png");
+    static final BufferedImage TREASURE_RUG = load("props/treasure_rug.png");
+    static final BufferedImage SHOT = load("projectiles/shot.png");
+    static final BufferedImage MELEE_SLASH = load("effects/melee_slash.png");
+    static final BufferedImage HUD_BAR_BACKGROUND =
+            load("ui/hud_bar_background.png");
+    static final BufferedImage HUD_BAR_FILL = load("ui/hud_bar_fill.png");
 
     private static final Map<Facing, BufferedImage[]> PLAYER_SPRITES =
             new EnumMap<>(Facing.class);
@@ -31,37 +37,37 @@ final class Sprites {
 
     static {
         PLAYER_SPRITES.put(Facing.DOWN, new BufferedImage[] {
-                load("player_down_0.png"),
-                load("player_down_1.png")
+                load("characters/player/player_down_0.png"),
+                load("characters/player/player_down_1.png")
         });
         PLAYER_SPRITES.put(Facing.UP, new BufferedImage[] {
-                load("player_up_0.png"),
-                load("player_up_1.png")
+                load("characters/player/player_up_0.png"),
+                load("characters/player/player_up_1.png")
         });
         PLAYER_SPRITES.put(Facing.LEFT, new BufferedImage[] {
-                load("player_left_0.png"),
-                load("player_left_1.png")
+                load("characters/player/player_left_0.png"),
+                load("characters/player/player_left_1.png")
         });
         PLAYER_SPRITES.put(Facing.RIGHT, new BufferedImage[] {
-                load("player_right_0.png"),
-                load("player_right_1.png")
+                load("characters/player/player_right_0.png"),
+                load("characters/player/player_right_1.png")
         });
 
         ENEMY_SPRITES.put(Facing.DOWN, new BufferedImage[] {
-                load("enemy_down_0.png"),
-                load("enemy_down_1.png")
+                load("characters/enemy/enemy_down_0.png"),
+                load("characters/enemy/enemy_down_1.png")
         });
         ENEMY_SPRITES.put(Facing.UP, new BufferedImage[] {
-                load("enemy_up_0.png"),
-                load("enemy_up_1.png")
+                load("characters/enemy/enemy_up_0.png"),
+                load("characters/enemy/enemy_up_1.png")
         });
         ENEMY_SPRITES.put(Facing.LEFT, new BufferedImage[] {
-                load("enemy_left_0.png"),
-                load("enemy_left_1.png")
+                load("characters/enemy/enemy_left_0.png"),
+                load("characters/enemy/enemy_left_1.png")
         });
         ENEMY_SPRITES.put(Facing.RIGHT, new BufferedImage[] {
-                load("enemy_right_0.png"),
-                load("enemy_right_1.png")
+                load("characters/enemy/enemy_right_0.png"),
+                load("characters/enemy/enemy_right_1.png")
         });
     }
 

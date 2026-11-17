@@ -1,7 +1,7 @@
 package game;
 
 public abstract class CharacterEntity extends GameEntity {
-    private final int maxHealth;
+    private int maxHealth;
     private double moveSpeed;
     private int damage;
     private double attackSpeed;
@@ -49,6 +49,13 @@ public abstract class CharacterEntity extends GameEntity {
         moveSpeed += amount;
     }
 
+    protected void multiplyMoveSpeed(double multiplier) {
+        if (!Double.isFinite(multiplier) || multiplier <= 0) {
+            throw new IllegalArgumentException("Speed multiplier must be positive");
+        }
+        moveSpeed *= multiplier;
+    }
+
     protected void increaseDamage(int amount) {
         if (amount < 0) {
             throw new IllegalArgumentException("Damage increase cannot be negative");
@@ -56,11 +63,48 @@ public abstract class CharacterEntity extends GameEntity {
         damage += amount;
     }
 
+    protected void multiplyDamage(double multiplier) {
+        if (!Double.isFinite(multiplier) || multiplier <= 0) {
+            throw new IllegalArgumentException("Damage multiplier must be positive");
+        }
+        damage = (int) Math.round(damage * multiplier);
+    }
+
     protected void increaseAttackSpeed(double amount) {
         if (amount < 0) {
             throw new IllegalArgumentException("Attack speed increase cannot be negative");
         }
         attackSpeed += amount;
+    }
+
+    protected void decreaseAttackSpeed(double amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Attack speed decrease cannot be negative");
+        }
+        attackSpeed = Math.max(0.1, attackSpeed - amount);
+    }
+
+    protected void multiplyAttackSpeed(double multiplier) {
+        if (!Double.isFinite(multiplier) || multiplier <= 0) {
+            throw new IllegalArgumentException("Attack speed multiplier must be positive");
+        }
+        attackSpeed *= multiplier;
+    }
+
+    protected void increaseMaxHealth(int amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Health increase must be positive");
+        }
+        maxHealth = Math.addExact(maxHealth, amount);
+        health = (int) Math.min(maxHealth, (long) health + amount);
+    }
+
+    protected void decreaseMaxHealth(int amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Health decrease must be positive");
+        }
+        maxHealth = Math.max(1, maxHealth - amount);
+        health = Math.min(health, maxHealth);
     }
 
     public void takeDamage(int amount) {

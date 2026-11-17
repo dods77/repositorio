@@ -23,6 +23,14 @@ public class Room {
     static final int DOOR_HALF_HEIGHT = 48;
     static final int WALL_THICKNESS = 20;
     private static final int PATH_GRID_SIZE = 16;
+    private static final int GALLERY_COLUMNS = 7;
+    private static final int GALLERY_COLUMN_SPACING = 100;
+    private static final int GALLERY_ROW_SPACING = 105;
+    private static final int GALLERY_TOP_OFFSET = 48;
+    private static final int GALLERY_PEDESTAL_SIZE = 64;
+    private static final int GALLERY_ITEM_LIFT = 18;
+    private static final int GALLERY_LABEL_OFFSET = 60;
+    private static final int GALLERY_LABEL_FONT_SIZE = 10;
 
     private final int width;
     private final int height;
@@ -33,11 +41,10 @@ public class Room {
     private final PlayerCharacter player;
     private final List<Gilberto> gilbertos = new ArrayList<>();
     private final List<Shot> shots = new ArrayList<>();
+    private final List<PoisonCloud> poisonClouds = new ArrayList<>();
     private final BufferedImage background;
-    private final SchoolItem treasureItem;
-    private final int treasureItemX;
-    private final int treasureItemY;
-    private boolean treasureItemCollected;
+    private final List<ItemDisplay> itemDisplays = new ArrayList<>();
+    private double poisonSpawnCooldown;
 
     public Room(int width, int height, int number, RoomType type,
             boolean leftDoor, boolean rightDoor, PlayerCharacter player) {
@@ -51,11 +58,12 @@ public class Room {
         this.leftDoor = leftDoor;
         this.rightDoor = rightDoor;
         this.player = player;
-        treasureItem = type == RoomType.TREASURE
-                ? SchoolItem.randomTreasureItem()
-                : null;
-        treasureItemX = width / 2;
-        treasureItemY = height / 2 + 60;
+        if (type == RoomType.TREASURE) {
+            itemDisplays.add(new ItemDisplay(SchoolItem.randomTreasureItem(),
+                    width / 2, height / 2 + 60));
+        } else if (type == RoomType.GALLERY) {
+            addGalleryItems(width, height);
+        }
         double[][] spawnPoints = {
             {width * 0.82, height * 0.32},
             {width * 0.18, height * 0.32},
@@ -105,15 +113,36 @@ public class Room {
     }
 
     public SchoolItem getTreasureItem() {
-        return treasureItem;
+        if (type != RoomType.TREASURE || itemDisplays.isEmpty()) {
+            return null;
+        }
+        return itemDisplays.get(0).getItem();
     }
 
     public boolean isTreasureItemCollected() {
-        return treasureItemCollected;
+        return type == RoomType.TREASURE && !itemDisplays.isEmpty()
+                && itemDisplays.get(0).isCollected();
+    }
+
+    public ItemDisplay getNearestItem(double x, double y, double maxDistance) {
+        ItemDisplay nearest = null;
+        double nearestDistance = maxDistance;
+        for (ItemDisplay display : itemDisplays) {
+            if (display.isCollected()) {
+                continue;
+            }
+            double distance = Math.hypot(display.getX() - x, display.getY() - y);
+            if (distance <= nearestDistance) {
+                nearestDistance = distance;
+                nearest = display;
+            }
+        }
+        return nearest;
     }
 
     public void clearShots() {
         shots.clear();
+        poisonClouds.clear();
     }
 
     Point2D.Double getNextWaypoint(Gilberto mover) {
@@ -319,6 +348,35 @@ public class Room {
         return Math.max(minimum, Math.min(maximum, value));
     }
 
+    public static final class ItemDisplay {
+        private final SchoolItem item;
+        private final int x;
+        private final int y;
+        private boolean collected;
+
+        private ItemDisplay(SchoolItem item, int x, int y) {
+            this.item = item;
+            this.x = x;
+            this.y = y;
+        }
+
+        public SchoolItem getItem() {
+            return item;
+        }
+
+        public int getX() {
+            return x;
+        }
+
+        public int getY() {
+            return y;
+        }
+
+        public boolean isCollected() {
+            return collected;
+        }
+    }
+
     private static final class PathNode {
         private final int column;
         private final int row;
@@ -332,13 +390,16 @@ public class Room {
     }
 
     public Exit update(double deltaSeconds) {
+        double previousPlayerX = player.getX();
+        double previousPlayerY = player.getY();
         player.update(deltaSeconds);
         Exit exit = player.move(this, deltaSeconds);
         if (exit != Exit.NONE) {
             return exit;
         }
 
-        collectTreasureItem();
+        updatePoisonTrail(previousPlayerX, previousPlayerY, deltaSeconds);
+        collectItems();
 
         for (Gilberto gilberto : gilbertos) {
             double previousX = gilberto.getX();
@@ -354,9 +415,30 @@ public class Room {
             gilberto.tryDamageOnContact(player);
         }
 
+        player.updateCompanions(gilbertos, deltaSeconds);
+        gilbertos.removeIf(gilberto -> gilberto.getHealth() == 0);
+
+        Iterator<PoisonCloud> cloudIterator = poisonClouds.iterator();
+        while (cloudIterator.hasNext()) {
+            if (cloudIterator.next().update(gilbertos, deltaSeconds)) {
+                cloudIterator.remove();
+            }
+        }
+
         Shot newShot = player.tryShoot();
         if (newShot != null) {
             shots.add(newShot);
+            if (player.consumeCapoeiraSpin()) {
+                player.showSpinningSlash();
+                damageInRadius(player.getX(), player.getY(), 64,
+                        (int) Math.round(player.getDamage() * 1.5));
+            }
+        }
+        player.tryKatanaAttack(gilbertos);
+        gilbertos.removeIf(gilberto -> gilberto.getHealth() == 0);
+        Shot familiarShot = player.tryShootWithDrone(gilbertos, deltaSeconds);
+        if (familiarShot != null) {
+            shots.add(familiarShot);
         }
 
         Iterator<Shot> shotIterator = shots.iterator();
@@ -372,7 +454,9 @@ public class Room {
             while (gilbertoIterator.hasNext()) {
                 Gilberto gilberto = gilbertoIterator.next();
                 if (overlaps(shot, gilberto)) {
-                    gilberto.takeDamage(player.getDamage());
+                    gilberto.receiveShot(shot, player.getDamage(),
+                            player.getSleepHitsPerEnemy(), player.getSleepDuration(),
+                            player.getRootDuration());
                     shotIterator.remove();
                     if (gilberto.getHealth() == 0) {
                         gilbertoIterator.remove();
@@ -387,11 +471,21 @@ public class Room {
     public void draw(Graphics2D graphics) {
         graphics.drawImage(background, 0, 0, null);
 
+        for (PoisonCloud cloud : poisonClouds) {
+            cloud.draw(graphics);
+        }
         for (Gilberto gilberto : gilbertos) {
             gilberto.draw(graphics);
         }
-        if (treasureItem != null && !treasureItemCollected) {
-            treasureItem.draw(graphics, treasureItemX, treasureItemY);
+        for (ItemDisplay display : itemDisplays) {
+            if (display.isCollected()) {
+                continue;
+            }
+            if (type == RoomType.GALLERY) {
+                drawGalleryItem(graphics, display);
+            } else {
+                display.getItem().draw(graphics, display.getX(), display.getY());
+            }
         }
         for (Shot shot : shots) {
             shot.draw(graphics);
@@ -399,16 +493,89 @@ public class Room {
         player.draw(graphics);
     }
 
-    private void collectTreasureItem() {
-        if (treasureItem == null || treasureItemCollected
-                || Math.abs(player.getX() - treasureItemX)
-                        > player.getWidth() / 2.0 + 16
-                || Math.abs(player.getY() - treasureItemY)
-                        > player.getHeight() / 2.0 + 16) {
-            return;
+    public void activateItems() {
+        player.activateItems(gilbertos);
+        gilbertos.removeIf(gilberto -> gilberto.getHealth() == 0);
+    }
+
+    private void updatePoisonTrail(double previousX, double previousY,
+            double deltaSeconds) {
+        poisonSpawnCooldown = Math.max(0, poisonSpawnCooldown - deltaSeconds);
+        if (player.hasPoisonTrail() && poisonSpawnCooldown == 0
+                && Math.hypot(player.getX() - previousX,
+                        player.getY() - previousY) >= 2) {
+            poisonClouds.add(new PoisonCloud(player.getX(), player.getY()));
+            poisonSpawnCooldown = 0.3;
         }
-        player.applyItem(treasureItem);
-        treasureItemCollected = true;
+    }
+
+    private void damageInRadius(double centerX, double centerY, double radius,
+            int damage) {
+        Iterator<Gilberto> iterator = gilbertos.iterator();
+        while (iterator.hasNext()) {
+            Gilberto gilberto = iterator.next();
+            if (Math.hypot(gilberto.getX() - centerX,
+                    gilberto.getY() - centerY) <= radius) {
+                gilberto.takeDamage(damage);
+                if (gilberto.getHealth() == 0) {
+                    iterator.remove();
+                }
+            }
+        }
+    }
+
+    private void collectItems() {
+        double reachX = player.getWidth() / 2.0 + 16;
+        double reachY = player.getHeight() / 2.0 + 16;
+        int existingItemCount = itemDisplays.size();
+        for (int index = 0; index < existingItemCount; index++) {
+            ItemDisplay display = itemDisplays.get(index);
+            if (display.isCollected()
+                    || Math.abs(player.getX() - display.getX()) > reachX
+                    || Math.abs(player.getY() - display.getY()) > reachY) {
+                continue;
+            }
+            SchoolItem droppedItem = player.collectItem(display.getItem());
+            display.collected = true;
+            if (droppedItem != null) {
+                int direction = player.getX() < width / 2.0 ? 1 : -1;
+                double dropX = Math.max(WALL_THICKNESS + player.getWidth() / 2.0,
+                        Math.min(width - WALL_THICKNESS - player.getWidth() / 2.0,
+                                player.getX() + direction * 48));
+                itemDisplays.add(new ItemDisplay(droppedItem,
+                        (int) Math.round(dropX), (int) Math.round(player.getY())));
+            }
+        }
+    }
+
+    private void addGalleryItems(int roomWidth, int roomHeight) {
+        List<SchoolItem> items = SchoolItem.allItems();
+        int startX = roomWidth / 2
+                - (GALLERY_COLUMNS - 1) * GALLERY_COLUMN_SPACING / 2;
+        int rows = (items.size() + GALLERY_COLUMNS - 1) / GALLERY_COLUMNS;
+        int gridHeight = (rows - 1) * GALLERY_ROW_SPACING;
+        int firstRowY = (roomHeight - gridHeight) / 2 + GALLERY_TOP_OFFSET;
+        for (int index = 0; index < items.size(); index++) {
+            int column = index % GALLERY_COLUMNS;
+            int row = index / GALLERY_COLUMNS;
+            int itemsInRow = Math.min(GALLERY_COLUMNS,
+                    items.size() - row * GALLERY_COLUMNS);
+            int rowOffset = (GALLERY_COLUMNS - itemsInRow)
+                    * GALLERY_COLUMN_SPACING / 2;
+            itemDisplays.add(new ItemDisplay(items.get(index),
+                    startX + column * GALLERY_COLUMN_SPACING + rowOffset,
+                    firstRowY + row * GALLERY_ROW_SPACING));
+        }
+    }
+
+    private void drawGalleryItem(Graphics2D graphics, ItemDisplay display) {
+        int size = GALLERY_PEDESTAL_SIZE;
+        graphics.drawImage(Sprites.PEDESTAL,
+                display.getX() - size / 2, display.getY() - size / 2,
+                size, size, null);
+        display.getItem().draw(graphics, display.getX(),
+                display.getY() - GALLERY_ITEM_LIFT, GALLERY_LABEL_OFFSET,
+                GALLERY_LABEL_FONT_SIZE);
     }
 
     private boolean overlaps(GameEntity first, GameEntity second) {
@@ -437,9 +604,9 @@ public class Room {
     }
 
     private void drawFloor(Graphics2D graphics) {
-        BufferedImage floor = type == RoomType.TREASURE
-                ? Sprites.FLOOR_TREASURE
-                : Sprites.FLOOR_NORMAL;
+        BufferedImage floor = type == RoomType.NORMAL
+                ? Sprites.FLOOR_NORMAL
+                : Sprites.FLOOR_TREASURE;
         for (int y = 0; y < height; y += floor.getHeight()) {
             for (int x = 0; x < width; x += floor.getWidth()) {
                 graphics.drawImage(floor, x, y, null);

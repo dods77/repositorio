@@ -78,12 +78,17 @@ public final class GamePanel extends JPanel {
         bindKey("released DOWN", "DOWN", false);
         bindKey("pressed RIGHT", "RIGHT", true);
         bindKey("released RIGHT", "RIGHT", false);
+        bindKey("pressed SPACE", "SPACE", true);
+        bindKey("released SPACE", "SPACE", false);
     }
 
     private void bindKey(String keyStroke, String key, boolean pressed) {
         bind(keyStroke, keyStroke, () -> {
             if (pressed) {
-                pressedKeys.add(key);
+                boolean newlyPressed = pressedKeys.add(key);
+                if (newlyPressed && "SPACE".equals(key)) {
+                    dungeon.activateItems();
+                }
             } else {
                 pressedKeys.remove(key);
             }
@@ -116,13 +121,16 @@ public final class GamePanel extends JPanel {
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
         g.drawString("Little Room", 16, 26);
 
-        String roomText = "Room " + dungeon.getCurrentRoomNumber()
-                + " / " + dungeon.getRoomCount();
+        Room currentRoom = dungeon.getCurrentRoom();
+        String roomText = currentRoom.getType() == RoomType.GALLERY
+                ? currentRoom.getType().getDisplayName()
+                : "Room " + dungeon.getCurrentRoomNumber()
+                        + " / " + dungeon.getNumberedRoomCount();
         int roomTextWidth = g.getFontMetrics().stringWidth(roomText);
         g.drawString(roomText, ROOM_WIDTH - 16 - roomTextWidth, 26);
 
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-        g.drawString("Move: WASD    Hold arrow keys to shoot", 16, 48);
+        g.drawString("Move: WASD    Shoot / katana: arrows    Active item: Space", 16, 48);
         if (dungeon.getCurrentRoomType() == RoomType.TREASURE) {
             g.setColor(new Color(235, 205, 125));
             String treasureText = dungeon.getCurrentRoomType().getDisplayName();
@@ -131,23 +139,26 @@ public final class GamePanel extends JPanel {
             g.setColor(Color.WHITE);
         }
         g.drawString("Shots in room: " + dungeon.getShotCount(), 16, 68);
-        Room currentRoom = dungeon.getCurrentRoom();
-        SchoolItem treasureItem = currentRoom.getTreasureItem();
-        if (treasureItem != null) {
-            g.setColor(treasureItem.getRarityColor());
-            String itemText = (currentRoom.isTreasureItemCollected()
-                    ? "Obtido: "
-                    : "Pegue: ")
-                    + treasureItem.getDisplayName() + " ("
-                    + treasureItem.getRarityName() + "): "
-                    + treasureItem.getDescription()
-                    + (currentRoom.isTreasureItemCollected()
-                            ? ""
-                            : " — encoste para pegar");
+        PlayerCharacter player = dungeon.getPlayer();
+        SchoolItem highlightedItem = currentRoom.getTreasureItem();
+        boolean itemCollected = currentRoom.isTreasureItemCollected();
+        if (highlightedItem == null) {
+            Room.ItemDisplay nearest = currentRoom.getNearestItem(
+                    player.getX(), player.getY(), 100);
+            if (nearest != null) {
+                highlightedItem = nearest.getItem();
+            }
+        }
+        if (highlightedItem != null) {
+            g.setColor(highlightedItem.getRarityColor());
+            String itemText = (itemCollected ? "Obtido: " : "Pegue: ")
+                    + highlightedItem.getDisplayName() + " ("
+                    + highlightedItem.getRarityName() + "): "
+                    + highlightedItem.getDescription()
+                    + (itemCollected ? "" : " — encoste para pegar");
             g.drawString(itemText, 16, 142);
             g.setColor(Color.WHITE);
         }
-        PlayerCharacter player = dungeon.getPlayer();
         int barX = 16;
         int barY = 82;
         int barWidth = Sprites.HUD_BAR_BACKGROUND.getWidth();
@@ -166,6 +177,30 @@ public final class GamePanel extends JPanel {
                 + "    Damage: " + player.getDamage()
                 + "    Attack: " + player.getAttackSpeed() + " shots/s",
                 16, 118);
+        drawItemCooldowns(g, player);
         g.dispose();
+    }
+
+    private void drawItemCooldowns(Graphics2D graphics, PlayerCharacter player) {
+        int x = 16;
+        int y = 164;
+        int barWidth = 140;
+        int barHeight = 10;
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        for (PlayerCharacter.ItemCooldown cooldown : player.getActiveItemCooldowns()) {
+            graphics.setColor(Color.WHITE);
+            graphics.drawString(cooldown.name(), x, y + barHeight - 1);
+            int currentBarX = x + 72;
+            graphics.setColor(new Color(65, 65, 65));
+            graphics.fillRect(currentBarX, y, barWidth, barHeight);
+            graphics.setColor(cooldown.progress() >= 1
+                    ? new Color(80, 205, 110)
+                    : new Color(85, 155, 220));
+            graphics.fillRect(currentBarX, y,
+                    (int) Math.round(barWidth * cooldown.progress()), barHeight);
+            graphics.setColor(Color.WHITE);
+            graphics.drawRect(currentBarX, y, barWidth, barHeight);
+            y += 17;
+        }
     }
 }

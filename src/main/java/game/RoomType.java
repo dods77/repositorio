@@ -2,7 +2,8 @@ package game;
 
 public enum RoomType {
     NORMAL("Normal Room"),
-    TREASURE("Treasure Room");
+    TREASURE("Treasure Room"),
+    GALLERY("Item Gallery");
 
     private final String displayName;
 
