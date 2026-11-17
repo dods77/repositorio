@@ -34,6 +34,12 @@ public class PlayerCharacter extends CharacterEntity {
         this.shooting = shooting;
     }
 
+    public void applyItem(SchoolItem item) {
+        increaseDamage(item.getDamageBonus());
+        increaseMoveSpeed(item.getMoveSpeedBonus());
+        increaseAttackSpeed(item.getAttackSpeedBonus());
+    }
+
     @Override
     public void update(double deltaSeconds) {
         shotCooldown = Math.max(0, shotCooldown - deltaSeconds);

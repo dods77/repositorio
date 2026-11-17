@@ -131,6 +131,22 @@ public final class GamePanel extends JPanel {
             g.setColor(Color.WHITE);
         }
         g.drawString("Shots in room: " + dungeon.getShotCount(), 16, 68);
+        Room currentRoom = dungeon.getCurrentRoom();
+        SchoolItem treasureItem = currentRoom.getTreasureItem();
+        if (treasureItem != null) {
+            g.setColor(treasureItem.getRarityColor());
+            String itemText = (currentRoom.isTreasureItemCollected()
+                    ? "Obtido: "
+                    : "Pegue: ")
+                    + treasureItem.getDisplayName() + " ("
+                    + treasureItem.getRarityName() + "): "
+                    + treasureItem.getDescription()
+                    + (currentRoom.isTreasureItemCollected()
+                            ? ""
+                            : " — encoste para pegar");
+            g.drawString(itemText, 16, 142);
+            g.setColor(Color.WHITE);
+        }
         PlayerCharacter player = dungeon.getPlayer();
         int barX = 16;
         int barY = 82;

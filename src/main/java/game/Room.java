@@ -28,6 +28,10 @@ public class Room {
     private final List<Gilberto> gilbertos = new ArrayList<>();
     private final List<Shot> shots = new ArrayList<>();
     private final BufferedImage background;
+    private final SchoolItem treasureItem;
+    private final int treasureItemX;
+    private final int treasureItemY;
+    private boolean treasureItemCollected;
 
     public Room(int width, int height, int number, RoomType type,
             boolean leftDoor, boolean rightDoor, PlayerCharacter player) {
@@ -41,6 +45,11 @@ public class Room {
         this.leftDoor = leftDoor;
         this.rightDoor = rightDoor;
         this.player = player;
+        treasureItem = type == RoomType.TREASURE
+                ? SchoolItem.randomTreasureItem()
+                : null;
+        treasureItemX = width / 2;
+        treasureItemY = height / 2 + 60;
         double[][] spawnPoints = {
             {width * 0.82, height * 0.32},
             {width * 0.18, height * 0.32},
@@ -87,6 +96,14 @@ public class Room {
         return shots.size();
     }
 
+    public SchoolItem getTreasureItem() {
+        return treasureItem;
+    }
+
+    public boolean isTreasureItemCollected() {
+        return treasureItemCollected;
+    }
+
     public void clearShots() {
         shots.clear();
     }
@@ -97,6 +114,8 @@ public class Room {
         if (exit != Exit.NONE) {
             return exit;
         }
+
+        collectTreasureItem();
 
         for (Gilberto gilberto : gilbertos) {
             double previousX = gilberto.getX();
@@ -148,10 +167,25 @@ public class Room {
         for (Gilberto gilberto : gilbertos) {
             gilberto.draw(graphics);
         }
+        if (treasureItem != null && !treasureItemCollected) {
+            treasureItem.draw(graphics, treasureItemX, treasureItemY);
+        }
         for (Shot shot : shots) {
             shot.draw(graphics);
         }
         player.draw(graphics);
+    }
+
+    private void collectTreasureItem() {
+        if (treasureItem == null || treasureItemCollected
+                || Math.abs(player.getX() - treasureItemX)
+                        > player.getWidth() / 2.0 + 16
+                || Math.abs(player.getY() - treasureItemY)
+                        > player.getHeight() / 2.0 + 16) {
+            return;
+        }
+        player.applyItem(treasureItem);
+        treasureItemCollected = true;
     }
 
     private boolean overlaps(GameEntity first, GameEntity second) {

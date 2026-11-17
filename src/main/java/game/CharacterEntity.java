@@ -2,9 +2,9 @@ package game;
 
 public abstract class CharacterEntity extends GameEntity {
     private final int maxHealth;
-    private final double moveSpeed;
-    private final int damage;
-    private final double attackSpeed;
+    private double moveSpeed;
+    private int damage;
+    private double attackSpeed;
     private int health;
     private double moveX;
     private double moveY;
@@ -40,6 +40,27 @@ public abstract class CharacterEntity extends GameEntity {
 
     public double getAttackSpeed() {
         return attackSpeed;
+    }
+
+    protected void increaseMoveSpeed(double amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Speed increase cannot be negative");
+        }
+        moveSpeed += amount;
+    }
+
+    protected void increaseDamage(int amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Damage increase cannot be negative");
+        }
+        damage += amount;
+    }
+
+    protected void increaseAttackSpeed(double amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Attack speed increase cannot be negative");
+        }
+        attackSpeed += amount;
     }
 
     public void takeDamage(int amount) {
