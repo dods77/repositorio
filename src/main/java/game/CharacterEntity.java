@@ -9,9 +9,9 @@ public abstract class CharacterEntity extends GameEntity {
     private double moveX;
     private double moveY;
 
-    protected CharacterEntity(double x, double y, int size, int maxHealth,
+    protected CharacterEntity(double x, double y, int width, int height, int maxHealth,
             double moveSpeed, int damage, double attackSpeed) {
-        super(x, y, size, size);
+        super(x, y, width, height);
         if (maxHealth <= 0 || moveSpeed <= 0 || damage < 0 || attackSpeed <= 0) {
             throw new IllegalArgumentException("Character stats must be positive, except damage");
         }

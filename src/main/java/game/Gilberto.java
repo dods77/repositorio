@@ -13,7 +13,7 @@ public final class Gilberto extends CharacterEntity {
     private int walkFrame;
 
     public Gilberto(double x, double y) {
-        super(x, y, 32, 100, 165, 10, 3);
+        super(x, y, 20, 31, 100, 165, 10, 3);
     }
 
     @Override
