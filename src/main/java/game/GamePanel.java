@@ -7,6 +7,9 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.util.HashSet;
 import java.util.Set;
 import javax.swing.AbstractAction;
@@ -24,12 +27,43 @@ public final class GamePanel extends JPanel {
     private final Dungeon dungeon = new Dungeon(ROOM_WIDTH, ROOM_HEIGHT);
     private final Set<String> pressedKeys = new HashSet<>();
     private final Timer timer;
+    private boolean mouseShooting;
+    private int mouseX;
+    private int mouseY;
     private long previousFrameNanos;
 
     public GamePanel() {
         setPreferredSize(new Dimension(ROOM_WIDTH, ROOM_HEIGHT));
         setFocusable(true);
         installControls();
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent event) {
+                if (event.getButton() == MouseEvent.BUTTON1) {
+                    mouseShooting = true;
+                    updateMousePosition(event);
+                    requestFocusInWindow();
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent event) {
+                if (event.getButton() == MouseEvent.BUTTON1) {
+                    mouseShooting = false;
+                }
+            }
+        });
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent event) {
+                updateMousePosition(event);
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent event) {
+                updateMousePosition(event);
+            }
+        });
 
         previousFrameNanos = System.nanoTime();
         timer = new Timer(16, event -> tick());
@@ -46,9 +80,16 @@ public final class GamePanel extends JPanel {
         double vertical = (isPressed("S") ? 1 : 0) - (isPressed("W") ? 1 : 0);
         player.setMovement(horizontal, vertical);
 
-        double aimX = (isPressed("RIGHT") ? 1 : 0) - (isPressed("LEFT") ? 1 : 0);
-        double aimY = (isPressed("DOWN") ? 1 : 0) - (isPressed("UP") ? 1 : 0);
-        boolean shooting = aimX != 0 || aimY != 0;
+        double aimX;
+        double aimY;
+        if (mouseShooting) {
+            aimX = mouseX - player.getX();
+            aimY = mouseY - player.getY();
+        } else {
+            aimX = (isPressed("RIGHT") ? 1 : 0) - (isPressed("LEFT") ? 1 : 0);
+            aimY = (isPressed("DOWN") ? 1 : 0) - (isPressed("UP") ? 1 : 0);
+        }
+        boolean shooting = mouseShooting || aimX != 0 || aimY != 0;
         if (shooting) {
             player.setAim(aimX, aimY);
         }
@@ -59,6 +100,11 @@ public final class GamePanel extends JPanel {
 
     private boolean isPressed(String key) {
         return pressedKeys.contains(key);
+    }
+
+    private void updateMousePosition(MouseEvent event) {
+        mouseX = event.getX();
+        mouseY = event.getY();
     }
 
     private void installControls() {
@@ -130,7 +176,8 @@ public final class GamePanel extends JPanel {
         g.drawString(roomText, ROOM_WIDTH - 16 - roomTextWidth, 26);
 
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-        g.drawString("Move: WASD    Shoot / katana: arrows    Active item: Space", 16, 48);
+        g.drawString("Move: WASD    Shoot: arrows or hold left mouse    Active item: Space",
+            16, 48);
         if (dungeon.getCurrentRoomType() == RoomType.TREASURE) {
             g.setColor(new Color(235, 205, 125));
             String treasureText = dungeon.getCurrentRoomType().getDisplayName();

@@ -49,6 +49,7 @@ classpath.
 - **WASD**: Move
 - **Hold arrow keys**: Shoot in that direction (combine two for diagonal shots);
   with the katana, slash in that direction instead
+- **Hold the left mouse button**: Aim at the cursor and shoot continuously
 - **Space**: Activate items that have an active ability
 
 The katana replaces ranged shots: hold an arrow key to swing in that direction.

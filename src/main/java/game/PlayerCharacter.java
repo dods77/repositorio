@@ -11,7 +11,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class PlayerCharacter extends CharacterEntity {
     private static final String NAME = "Isaacaias";
-    private static final int SHOT_SIZE = 10;
+    private static final int SHOT_SIZE = 100;
     private static final double SHOT_SPEED = 420;
 
     private double aimX = 1;
@@ -138,7 +138,7 @@ public class PlayerCharacter extends CharacterEntity {
             return null;
         }
 
-        shotCooldown = 1.0 / getAttackSpeed();
+        shotCooldown = 0.002 / getAttackSpeed();
         double startX = x + aimX * (width / 2.0 + projectileSize);
         double startY = y + aimY * (height / 2.0 + projectileSize);
         boolean syringe = ThreadLocalRandom.current().nextDouble() < syringeChance;
