@@ -42,7 +42,7 @@ public class PlayerCharacter extends CharacterEntity {
     private int walkFrame;
 
     public PlayerCharacter(double x, double y) {
-        super(x, y, 32, 100, 220, 10, 3);
+        super(x, y, 20, 29, 100, 220, 10, 3);
     }
 
     public void setAim(double horizontal, double vertical) {

@@ -71,7 +71,7 @@ public class Room {
             {width * 0.18, height * 0.68},
             {width * 0.50, height * 0.18}
         };
-        if (number > 1) {
+        if (number > 1 && type != RoomType.TREASURE) {
             int gilbertoCount = ThreadLocalRandom.current().nextInt(1, 6);
             for (int index = 0; index < gilbertoCount; index++) {
                 gilbertos.add(new Gilberto(spawnPoints[index][0], spawnPoints[index][1]));
@@ -146,7 +146,8 @@ public class Room {
     }
 
     Point2D.Double getNextWaypoint(Gilberto mover) {
-        Point2D.Double directTarget = getPlayerContactPoint(mover.getX(), mover.getY());
+        Point2D.Double directTarget = getPlayerContactPoint(
+            mover.getX(), mover.getY(), mover);
         if (!isDirectPathBlocked(mover, directTarget)) {
             return directTarget;
         }
@@ -225,7 +226,7 @@ public class Room {
             return null;
         }
         if (goal == start) {
-            return getPlayerContactPoint(mover.getX(), mover.getY());
+            return getPlayerContactPoint(mover.getX(), mover.getY(), mover);
         }
 
         List<Point2D.Double> path = new ArrayList<>();
@@ -242,7 +243,7 @@ public class Room {
 
         Collections.reverse(path);
         Point2D.Double contactPoint = getPlayerContactPoint(
-                gridCoordinate(goal % columns), gridCoordinate(goal / columns));
+            gridCoordinate(goal % columns), gridCoordinate(goal / columns), mover);
         if (!isDirectPathBlocked(mover, contactPoint)) {
             return contactPoint;
         }
@@ -316,11 +317,11 @@ public class Room {
                 && (horizontal >= halfWidth || vertical >= halfHeight);
     }
 
-    private Point2D.Double getPlayerContactPoint(double x, double y) {
+    private Point2D.Double getPlayerContactPoint(double x, double y, Gilberto mover) {
         double horizontal = x - player.getX();
         double vertical = y - player.getY();
-        double halfWidth = 32;
-        double halfHeight = 32;
+        double halfWidth = (mover.getWidth() + player.getWidth()) / 2.0;
+        double halfHeight = (mover.getHeight() + player.getHeight()) / 2.0;
         if (Math.abs(horizontal) >= Math.abs(vertical)) {
             return new Point2D.Double(player.getX()
                     + Math.copySign(halfWidth, horizontal),
