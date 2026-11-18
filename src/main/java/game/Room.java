@@ -23,6 +23,7 @@ public class Room {
     static final int DOOR_HALF_HEIGHT = 48;
     static final int WALL_THICKNESS = 20;
     private static final int PATH_GRID_SIZE = 16;
+    private static final double ANTONIO_SPAWN_CLEARANCE = 48;
     private static final int GALLERY_COLUMNS = 7;
     private static final int GALLERY_COLUMN_SPACING = 100;
     private static final int GALLERY_ROW_SPACING = 105;
@@ -40,7 +41,9 @@ public class Room {
     private final boolean rightDoor;
     private final PlayerCharacter player;
     private final List<Gilberto> gilbertos = new ArrayList<>();
+    private final List<Antonio> antonios = new ArrayList<>();
     private final List<Shot> shots = new ArrayList<>();
+    private final List<EnemyShot> enemyShots = new ArrayList<>();
     private final List<PoisonCloud> poisonClouds = new ArrayList<>();
     private final BufferedImage background;
     private final List<ItemDisplay> itemDisplays = new ArrayList<>();
@@ -76,8 +79,63 @@ public class Room {
             for (int index = 0; index < gilbertoCount; index++) {
                 gilbertos.add(new Gilberto(spawnPoints[index][0], spawnPoints[index][1]));
             }
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            int antonioCount = random.nextInt(1, 4);
+            for (int index = 0; index < antonioCount; index++) {
+                antonios.add(createRandomAntonio(random));
+            }
         }
         background = createBackground();
+    }
+
+    private Antonio createRandomAntonio(ThreadLocalRandom random) {
+        double minimumX = WALL_THICKNESS + 10;
+        double maximumX = width - WALL_THICKNESS - 10;
+        double minimumY = WALL_THICKNESS + 16;
+        double maximumY = height - WALL_THICKNESS - 16;
+        if (maximumX <= minimumX) {
+            minimumX = width / 2.0;
+            maximumX = minimumX;
+        }
+        if (maximumY <= minimumY) {
+            minimumY = height / 2.0;
+            maximumY = minimumY;
+        }
+
+        Antonio bestCandidate = null;
+        double bestClearance = -1;
+        for (int attempt = 0; attempt < 100; attempt++) {
+            double x = maximumX == minimumX
+                    ? minimumX : random.nextDouble(minimumX, maximumX);
+            double y = maximumY == minimumY
+                    ? minimumY : random.nextDouble(minimumY, maximumY);
+            Antonio candidate = new Antonio(x, y);
+            double clearance = getAntonioSpawnClearance(candidate);
+            if (clearance >= ANTONIO_SPAWN_CLEARANCE) {
+                return candidate;
+            }
+            if (clearance > bestClearance) {
+                bestCandidate = candidate;
+                bestClearance = clearance;
+            }
+        }
+        return bestCandidate;
+    }
+
+    private double getAntonioSpawnClearance(Antonio candidate) {
+        double clearance = Math.hypot(candidate.getX() - player.getX(),
+                candidate.getY() - player.getY());
+        for (Gilberto gilberto : gilbertos) {
+            clearance = Math.min(clearance,
+                    Math.hypot(candidate.getX() - gilberto.getX(),
+                            candidate.getY() - gilberto.getY()));
+        }
+        for (Antonio antonio : antonios) {
+            clearance = Math.min(clearance,
+                    Math.hypot(candidate.getX() - antonio.getX(),
+                            candidate.getY() - antonio.getY()));
+        }
+        return clearance;
     }
 
     public int getWidth() {
@@ -109,7 +167,7 @@ public class Room {
     }
 
     public int getShotCount() {
-        return shots.size();
+        return shots.size() + enemyShots.size();
     }
 
     public SchoolItem getTreasureItem() {
@@ -142,6 +200,7 @@ public class Room {
 
     public void clearShots() {
         shots.clear();
+        enemyShots.clear();
         poisonClouds.clear();
     }
 
@@ -416,6 +475,15 @@ public class Room {
             gilberto.tryDamageOnContact(player);
         }
 
+        for (Antonio antonio : antonios) {
+            antonio.update(deltaSeconds);
+            antonio.approachIfOutOfRange(player, this, deltaSeconds);
+            EnemyShot enemyShot = antonio.tryShoot(player);
+            if (enemyShot != null) {
+                enemyShots.add(enemyShot);
+            }
+        }
+
         player.updateCompanions(gilbertos, deltaSeconds);
         gilbertos.removeIf(gilberto -> gilberto.getHealth() == 0);
 
@@ -452,6 +520,7 @@ public class Room {
             }
 
             Iterator<Gilberto> gilbertoIterator = gilbertos.iterator();
+            boolean hitEnemy = false;
             while (gilbertoIterator.hasNext()) {
                 Gilberto gilberto = gilbertoIterator.next();
                 if (overlaps(shot, gilberto)) {
@@ -462,8 +531,37 @@ public class Room {
                     if (gilberto.getHealth() == 0) {
                         gilbertoIterator.remove();
                     }
+                    hitEnemy = true;
                     break;
                 }
+            }
+            if (hitEnemy) {
+                continue;
+            }
+
+            Iterator<Antonio> antonioIterator = antonios.iterator();
+            while (antonioIterator.hasNext()) {
+                Antonio antonio = antonioIterator.next();
+                if (overlaps(shot, antonio)) {
+                    antonio.receiveShot(shot, player.getDamage());
+                    shotIterator.remove();
+                    if (antonio.getHealth() == 0) {
+                        antonioIterator.remove();
+                    }
+                    break;
+                }
+            }
+        }
+
+        Iterator<EnemyShot> enemyShotIterator = enemyShots.iterator();
+        while (enemyShotIterator.hasNext()) {
+            EnemyShot enemyShot = enemyShotIterator.next();
+            enemyShot.update(deltaSeconds);
+            if (enemyShot.isOutside(this)) {
+                enemyShotIterator.remove();
+            } else if (overlaps(enemyShot, player)) {
+                player.takeDamage(enemyShot.getDamage());
+                enemyShotIterator.remove();
             }
         }
         return Exit.NONE;
@@ -478,6 +576,9 @@ public class Room {
         for (Gilberto gilberto : gilbertos) {
             gilberto.draw(graphics);
         }
+        for (Antonio antonio : antonios) {
+            antonio.draw(graphics);
+        }
         for (ItemDisplay display : itemDisplays) {
             if (display.isCollected()) {
                 continue;
@@ -490,6 +591,9 @@ public class Room {
         }
         for (Shot shot : shots) {
             shot.draw(graphics);
+        }
+        for (EnemyShot enemyShot : enemyShots) {
+            enemyShot.draw(graphics);
         }
         player.draw(graphics);
     }

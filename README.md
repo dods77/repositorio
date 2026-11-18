@@ -9,8 +9,10 @@ treasure room with a collectible school item on its pedestal. Items have weighte
 damage, movement speed, attack speed, or maximum health when collected. Some
 items also apply a cosmetic effect or have no gameplay effect.
 
-Normal rooms are guarded by Gilberto, an enemy that chases the player, deals
-contact damage, and can be defeated with shots.
+Normal rooms after the first have 1-5 Gilbertos that chase and damage the player
+on contact, plus 1-3 Antonios that approach if the player is out of range and
+fire projectiles from random positions.
+Both enemies can be defeated with shots. Treasure rooms have no enemies.
 
 For a compact, AI-oriented map of the architecture, systems, and conventions,
 see [`AGENTS.md`](AGENTS.md).
@@ -73,6 +75,9 @@ The player starts with 100 HP, moves at 220 units per second, deals 10 damage
 per shot, and fires 3 shots per second. HP, speed, damage, and attack speed
 (shots per second) are reusable character attributes. Gilberto starts with
 100 HP, moves at 165 units per second, and deals 1 contact damage per second.
+Antonio has 100 HP, approaches at 90 units per second when the player is more
+than 350 units away, and fires 1-damage shots every 1.25 seconds while within
+range. He deals no contact damage.
 
 ## Structure
 
@@ -80,6 +85,8 @@ per shot, and fires 3 shots per second. HP, speed, damage, and attack speed
 - `CharacterEntity`: reusable movement base for the player and enemies.
 - `PlayerCharacter`: the current playable character.
 - `Gilberto`: the chasing enemy found in normal rooms.
+- `Antonio`: ranged enemy found in normal rooms after room 1.
+- `EnemyShot`: a projectile fired by Antonio that damages the player.
 - `Shot`: a projectile with its own movement and drawing behavior.
 - `Room`: composites the floor, walls, doors, and pedestal sprites, then draws
   the player, enemy, and active shots.

@@ -42,7 +42,9 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
           v
         Room (background image, enemies, shots, item pedestals, poison clouds)
           |-- Gilberto (enemy, A* grid pathfinding toward player)
+          |-- Antonio (ranged enemy that advances when outside firing range)
           |-- Shot (velocity-based projectile)
+          |-- EnemyShot (Antonio's damaging projectile)
           |-- ItemDisplay (SchoolItem + position + collected flag)
           |-- PoisonCloud (damage-over-time area)
           v
@@ -62,12 +64,14 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
 | `Main.java` | Creates the Swing frame and `GamePanel`. |
 | `GamePanel.java` | Game loop, key bindings, HUD text/bars, room label, item info, cooldown bars. |
 | `Dungeon.java` | Builds the room list (gallery + 15 rooms), handles door transitions and room bookkeeping. |
-| `Room.java` | Per-room simulation and drawing: 16 px A* grid for enemies, shots, items, poison, prerendered background. |
+| `Room.java` | Per-room simulation and drawing: 16 px A* grid for enemies, shots, items, poison, prerendered background; also updates Antonio and enemy shots. |
 | `RoomType.java` | `NORMAL`, `TREASURE`, `GALLERY` (+ display names). |
 | `GameEntity.java` | Base: center position `x/y`, `width/height`, `setPosition`, abstract `update`/`draw`. |
 | `CharacterEntity.java` | Health, max health, move speed, damage, attack speed, movement clamping, stat mutations with validation. |
 | `PlayerCharacter.java` | Player stats/actions: shooting, active items, cooldowns, drone, cat, slash visuals. |
 | `Gilberto.java` | Enemy: chases via `Room.getNextWaypoint`, contact damage, sleep/root status, shot handling. |
+| `Antonio.java` | Ranged enemy: 1-3 per normal room, random spawn positions, approaches beyond firing range, no contact damage. |
+| `EnemyShot.java` | Antonio's projectile: deals damage to the player and disappears outside the room. |
 | `Shot.java` | Projectile: velocity, size, syringe/sleep/root flags, sprite drawing (`syringe` drawn pink). |
 | `SchoolItem.java` | Abstract item + 27 nested item classes, rarity, stat modifiers, special effects, random pools. |
 | `CompanionCat.java` | Familiar that follows the player and melees nearby enemies (not a `GameEntity`). |
@@ -82,8 +86,9 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
 - Player spawns in room 1; walk left once to reach the gallery.
 - Every 5th room (5, 10, 15) is `TREASURE`: treasure rug + pedestal baked into
   the background, one random item displayed at `(width/2, height/2 + 60)`.
-- Rooms with `number > 1` spawn 1..5 Gilbertos at fixed percentage positions;
-  gallery and room 1 have no enemies.
+- Rooms with `number > 1` spawn 1..5 Gilbertos and 1..3 Antonios at random
+  positions; treasure
+  rooms are excluded. Gallery and room 1 have no enemies.
 - Doors: `number < roomCount` gives a right door; every numbered room also has
   a left door. Gallery has only a right door.
 - `Dungeon.moveThroughDoor` clears shots (and poison) on both rooms, changes
@@ -98,15 +103,16 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
 
 ## Player, enemy, and room constants
 
-| Value | Player | Gilberto |
-| --- | --- | --- |
-| Size | 32x32 | 32x32 |
-| Health | 100 | 100 |
-| Move speed | 220 u/s | 165 u/s |
-| Damage | 10 per shot | 1 contact damage (1 s cooldown) |
-| Attack speed | 3 shots/s | unused (3) |
+| Value | Player | Gilberto | Antonio |
+| --- | --- | --- | --- |
+| Size | 20x29 hitbox | 20x31 hitbox | 20x31 hitbox |
+| Health | 100 | 100 | 100 |
+| Move speed | 220 u/s | 165 u/s | 90 u/s when beyond range |
+| Damage | 10 per shot | 1 contact damage (1 s cooldown) | 1 per projectile |
+| Attack speed | 3 shots/s | unused (3) | one shot every 1.25 s |
 
 - Shot: speed 420 u/s, default size 10 px (`SHOT_SIZE`), sprite drawn scaled.
+- Antonio approaches when farther than 350 px; `EnemyShot` speed is 260 u/s.
 - Room: 800x600; wall thickness 20; door half-height 48; A* cell size 16 px.
 - Walk animation runs at 8 fps (player) and 7 fps (enemy).
 - Damage is an `int`; movement/positions are `double`; entity coordinates are
