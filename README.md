@@ -66,7 +66,7 @@ grant a companion. The razorblade, headphones, and pocket item activate with
 **Space**. The HUD shows the held active item's recharge bar, which turns green
 when ready. The pocket item grants a random passive item and has a 15-second
 cooldown; the razorblade costs 5 HP per activation but cannot reduce the player
-below 1 HP. Melee attacks use the slash sprite at
+below 1 HP. Melee attacks use an animated sweeping slash based on the sprite at
 `src/main/resources/sprites/effects/melee_slash.png`.
 
 ## Character attributes

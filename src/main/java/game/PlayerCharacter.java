@@ -13,6 +13,8 @@ public class PlayerCharacter extends CharacterEntity {
     private static final String NAME = "Isaacaias";
     private static final int SHOT_SIZE = 10;
     private static final double SHOT_SPEED = 420;
+    private static final double SLASH_DURATION = 0.24;
+    private static final double KATANA_SWEEP_ANGLE = Math.PI * 2 / 3;
 
     private double aimX = 1;
     private double aimY;
@@ -36,6 +38,7 @@ public class PlayerCharacter extends CharacterEntity {
     private SchoolItem activeItem;
     private double activeItemCooldown;
     private double slashTimer;
+    private double slashStartAngle;
     private boolean spinningSlash;
     private Facing facing = Facing.DOWN;
     private double walkTime;
@@ -117,12 +120,14 @@ public class PlayerCharacter extends CharacterEntity {
         boolean inDoorway = Math.abs(nextY - room.getHeight() / 2.0)
                 <= Room.DOOR_HALF_HEIGHT - halfHeight;
 
-        if (nextX < minX && room.hasLeftDoor() && inDoorway) {
+        if (nextX < minX && room.hasLeftDoor()
+                && room.areEnemiesDefeated() && inDoorway) {
             x = nextX;
             y = nextY;
             return Room.Exit.LEFT;
         }
-        if (nextX > maxX && room.hasRightDoor() && inDoorway) {
+        if (nextX > maxX && room.hasRightDoor()
+                && room.areEnemiesDefeated() && inDoorway) {
             x = nextX;
             y = nextY;
             return Room.Exit.RIGHT;
@@ -325,7 +330,8 @@ public class PlayerCharacter extends CharacterEntity {
     }
 
     private void showSlash(boolean spin) {
-        slashTimer = 0.22;
+        slashTimer = SLASH_DURATION;
+        slashStartAngle = Math.atan2(aimY, aimX);
         spinningSlash = spin;
     }
 
@@ -338,16 +344,21 @@ public class PlayerCharacter extends CharacterEntity {
             return;
         }
         Graphics2D slashGraphics = (Graphics2D) graphics.create();
-        float progress = (float) (slashTimer / 0.22);
-        slashGraphics.setComposite(AlphaComposite.SrcOver.derive(progress));
-        slashGraphics.translate(x, y);
+        double progress = 1 - slashTimer / SLASH_DURATION;
+        double easedProgress = 1 - Math.pow(1 - progress, 3);
+        float opacity = (float) (1 - progress * 0.55);
+        double scale = 0.8 + 0.2 * easedProgress;
+        double rotation = slashStartAngle - Math.PI / 2;
         if (spinningSlash) {
-            slashGraphics.rotate((1 - progress) * Math.PI * 2);
-            slashGraphics.drawImage(Sprites.MELEE_SLASH, 0, -48, 96, 96, null);
+            rotation += easedProgress * Math.PI * 2;
         } else {
-            slashGraphics.rotate(Math.atan2(aimY, aimX));
-            slashGraphics.drawImage(Sprites.MELEE_SLASH, 0, -48, 96, 96, null);
+            rotation += (easedProgress - 0.5) * KATANA_SWEEP_ANGLE;
         }
+        slashGraphics.setComposite(AlphaComposite.SrcOver.derive(opacity));
+        slashGraphics.translate(x, y);
+        slashGraphics.rotate(rotation);
+        slashGraphics.scale(scale, scale);
+        slashGraphics.drawImage(Sprites.MELEE_SLASH, 0, -48, 96, 96, null);
         slashGraphics.dispose();
     }
 

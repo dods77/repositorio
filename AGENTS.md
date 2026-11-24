@@ -139,7 +139,7 @@ Active items (fired together by **Space**, each with its own cooldown):
 
 | Item | Effect | Cooldown |
 | --- | --- | --- |
-| Katana | Frontal slash, 76 px range, 120° arc, player damage | 0.6 s |
+| Katana | Animated directional sweep, 76 px range, 120° arc, player damage | 0.6 s |
 | Razorblade | Frontal slash, 92 px range, 180° arc, 3x damage, costs 5 HP (never below 1) | 5 s |
 | Fones | Shockwave, 140 px radius, 2x damage | 8 s |
 | Bolso | Applies a random passive item from `randomPocketItem()` | 15 s |
@@ -149,7 +149,8 @@ Other systems:
 - SQL Injection: 10% of shots become syringes; a syringe kills on hit.
 - Pantufas: sleep hit counter per enemy; 3 hits => 2 s sleep (no contact damage).
 - Cabelo: every shot roots the enemy for 2 s.
-- Capoeira: every 3rd shot sets a spin flag; `Room` applies the AoE.
+- Capoeira: every 3rd shot sets a spin flag; `Room` applies the AoE and plays
+  an animated full-turn slash.
 - Malagetas: while moving >= 2 px, spawn a cloud every 0.3 s; cloud radius 30,
   lifetime 3 s, 2 damage every 0.75 s.
 - Drone: orbits at 42 px, 2.2 rad/s, shoots nearest enemy every 0.8 s at 320 u/s.

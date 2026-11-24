@@ -22,6 +22,8 @@ final class Sprites {
     static final BufferedImage WALL_VERTICAL =
             load("environment/wall_vertical.png");
     static final BufferedImage DOOR = load("environment/door.png");
+    static final BufferedImage LOCKED_DOOR =
+            load("environment/door_locked.png");
     static final BufferedImage PEDESTAL = load("props/pedestal.png");
     static final BufferedImage TREASURE_RUG = load("props/treasure_rug.png");
     static final BufferedImage SHOT = load("projectiles/shot.png");

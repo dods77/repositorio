@@ -77,6 +77,9 @@ public final class Dungeon {
     }
 
     private void moveThroughDoor(Room.Exit exit) {
+        if (!getCurrentRoom().areEnemiesDefeated()) {
+            return;
+        }
         int direction = exit == Room.Exit.RIGHT ? 1 : -1;
         int nextIndex = currentRoomIndex + direction;
         if (nextIndex < 0 || nextIndex >= rooms.size()) {

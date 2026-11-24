@@ -162,6 +162,10 @@ public class Room {
         return rightDoor;
     }
 
+    public boolean areEnemiesDefeated() {
+        return gilbertos.isEmpty() && antonios.isEmpty();
+    }
+
     public PlayerCharacter getPlayer() {
         return player;
     }
@@ -569,6 +573,7 @@ public class Room {
 
     public void draw(Graphics2D graphics) {
         graphics.drawImage(background, 0, 0, null);
+        drawDoors(graphics);
 
         for (PoisonCloud cloud : poisonClouds) {
             cloud.draw(graphics);
@@ -699,7 +704,6 @@ public class Room {
 
         drawFloor(graphics);
         drawWalls(graphics);
-        drawDoors(graphics);
         if (type == RoomType.TREASURE) {
             drawTreasureDecor(graphics);
         }
@@ -736,12 +740,17 @@ public class Room {
     private void drawDoors(Graphics2D graphics) {
         int doorY = height / 2 - Sprites.DOOR.getHeight() / 2;
         if (leftDoor) {
-            graphics.drawImage(Sprites.DOOR, 0, doorY, null);
+            drawDoor(graphics, 0, doorY);
         }
         if (rightDoor) {
-            graphics.drawImage(Sprites.DOOR, width - Sprites.DOOR.getWidth(),
-                    doorY, null);
+            drawDoor(graphics, width - Sprites.DOOR.getWidth(), doorY);
         }
+    }
+
+    private void drawDoor(Graphics2D graphics, int doorX, int doorY) {
+        BufferedImage door = areEnemiesDefeated()
+                ? Sprites.DOOR : Sprites.LOCKED_DOOR;
+        graphics.drawImage(door, doorX, doorY, null);
     }
 
     private void drawTreasureDecor(Graphics2D graphics) {
