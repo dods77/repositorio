@@ -104,7 +104,10 @@ public abstract class SchoolItem {
                 new PistolaDoDredItem(), new TokenPirataItem(),
                 new SqlInjectionItem(), new FamiliarDroneItem(),
                 new RazorbladeItem(), new FonesItem(), new BolsoItem(),
-                new MochilaItem());
+                new MochilaItem(), new MarmitaItem(),
+                new CebolaDaLancheiraItem(), new CintoDaEdFisicaItem(),
+                new BolaDeCriqueteItem(), new CoracaoDeGelatinaItem(),
+                new CogumeloDoLabItem());
     }
 
     public static SchoolItem randomTreasureItem() {
@@ -112,21 +115,24 @@ public abstract class SchoolItem {
         if (roll < 50) {
             return randomOf(new CanetaItem(), new LapisItem(), new BorrachaItem(),
                     new MalaItem(), new GorduraItem(), new JoelhoFudidoItem(),
-                    new OculosItem(), new PantufasItem());
+                    new OculosItem(), new PantufasItem(),
+                    new CebolaDaLancheiraItem(), new CintoDaEdFisicaItem());
         }
         if (roll < 80) {
             return randomOf(new ReguaItem(), new CadernoItem(),
                     new LasagnaPingodoceItem(), new HalteresItem(),
                     new KatanaItem(), new CabeloItem(), new CapoeiraItem(),
-                    new MalagetasItem(), new FamiliarIaItem());
+                    new MalagetasItem(), new FamiliarIaItem(),
+                    new MarmitaItem());
         }
         if (roll < 95) {
             return randomOf(new EstojoItem(), new CalculadoraItem(),
                     new PistolaDoDredItem(), new TokenPirataItem(),
                     new SqlInjectionItem(), new FamiliarDroneItem(),
-                    new RazorbladeItem(), new FonesItem(), new BolsoItem());
+                    new RazorbladeItem(), new FonesItem(), new BolsoItem(),
+                    new BolaDeCriqueteItem(), new CoracaoDeGelatinaItem());
         }
-        return new MochilaItem();
+        return randomOf(new MochilaItem(), new CogumeloDoLabItem());
     }
 
     public void draw(Graphics2D graphics, int centerX, int centerY) {
@@ -451,13 +457,75 @@ public abstract class SchoolItem {
         }
     }
 
+    public static final class CebolaDaLancheiraItem extends SchoolItem {
+        public CebolaDaLancheiraItem() {
+            super("Cebola da lancheira", Rarity.COMUM,
+                    "+1 velocidade de ataque", 0, 0, 1);
+        }
+    }
+
+    public static final class CintoDaEdFisicaItem extends SchoolItem {
+        public CintoDaEdFisicaItem() {
+            super("Cinto da ed. física", Rarity.COMUM, "+15 velocidade",
+                    0, 15, 0);
+        }
+    }
+
+    public static final class MarmitaItem extends SchoolItem {
+        public MarmitaItem() {
+            super("Marmita", Rarity.INCOMUM, "+25 HP máximo",
+                    0, 0, 0, 1, 1, 1, 25, false);
+        }
+    }
+
+    public static final class BolaDeCriqueteItem extends SchoolItem {
+        public BolaDeCriqueteItem() {
+            super("Bola de críquete", Rarity.RARO, "+75% dano",
+                    0, 0, 0, 1.75, 1, 1, 0, false);
+        }
+    }
+
+    public static final class CoracaoDeGelatinaItem extends SchoolItem {
+        public CoracaoDeGelatinaItem() {
+            super("Coração de gelatina", Rarity.RARO,
+                    "Ative para recuperar 40 HP (recarga: 20 s)",
+                    0, 0, 0);
+        }
+
+        @Override
+        public boolean isActivatable() {
+            return true;
+        }
+
+        @Override
+        public double getCooldownSeconds() {
+            return 20;
+        }
+
+        @Override
+        public void activate(PlayerCharacter player, List<Gilberto> enemies) {
+            player.heal(40);
+        }
+    }
+
+    public static final class CogumeloDoLabItem extends SchoolItem {
+        public CogumeloDoLabItem() {
+            super("Cogumelo do lab", Rarity.LENDARIO,
+                    "+2 dano, +10 velocidade, +0,5 ataque e +20 HP máximo",
+                    2, 10, 0.5, 1, 1, 1, 20, false);
+        }
+    }
+
     public static SchoolItem randomPocketItem() {
         return randomOf(new CanetaItem(), new LapisItem(), new BorrachaItem(),
                 new ReguaItem(), new CadernoItem(), new EstojoItem(),
                 new CalculadoraItem(), new MochilaItem(), new GorduraItem(),
                 new JoelhoFudidoItem(), new LasagnaPingodoceItem(),
                 new HalteresItem(), new OculosItem(), new PantufasItem(),
-                new SqlInjectionItem(), new FamiliarDroneItem());
+                new SqlInjectionItem(), new FamiliarDroneItem(),
+                new MarmitaItem(), new CebolaDaLancheiraItem(),
+                new CintoDaEdFisicaItem(), new BolaDeCriqueteItem(),
+                new CogumeloDoLabItem());
     }
 
     protected enum Rarity {

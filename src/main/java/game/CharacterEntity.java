@@ -114,6 +114,13 @@ public abstract class CharacterEntity extends GameEntity {
         health = amount >= health ? 0 : health - amount;
     }
 
+    public void heal(int amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Heal cannot be negative");
+        }
+        health = (int) Math.min(maxHealth, (long) health + amount);
+    }
+
     public void setMovement(double horizontal, double vertical) {
         double length = Math.hypot(horizontal, vertical);
         if (length > 1) {
@@ -133,11 +140,14 @@ public abstract class CharacterEntity extends GameEntity {
     }
 
     protected void moveWithin(Room room, double deltaSeconds) {
-        x += moveX * getMoveSpeed() * deltaSeconds;
-        y += moveY * getMoveSpeed() * deltaSeconds;
-        x = Math.max(Room.WALL_THICKNESS + width / 2.0,
-                Math.min(room.getWidth() - Room.WALL_THICKNESS - width / 2.0, x));
-        y = Math.max(Room.WALL_THICKNESS + height / 2.0,
-                Math.min(room.getHeight() - Room.WALL_THICKNESS - height / 2.0, y));
+        double nextX = x + moveX * getMoveSpeed() * deltaSeconds;
+        double nextY = y + moveY * getMoveSpeed() * deltaSeconds;
+        nextX = Math.max(Room.WALL_THICKNESS + width / 2.0,
+                Math.min(room.getWidth() - Room.WALL_THICKNESS - width / 2.0,
+                        nextX));
+        nextY = Math.max(Room.WALL_THICKNESS + height / 2.0,
+                Math.min(room.getHeight() - Room.WALL_THICKNESS - height / 2.0,
+                        nextY));
+        room.moveEntityWithin(this, nextX, nextY);
     }
 }

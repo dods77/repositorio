@@ -17,6 +17,13 @@ Both enemies can be defeated with shots. Treasure rooms have no enemies.
 For a compact, AI-oriented map of the architecture, systems, and conventions,
 see [`AGENTS.md`](AGENTS.md).
 
+Rooms use a church-inspired stone tile floor with randomized tile details.
+Normal rooms also have a changing arrangement of pews, pillars, candle stands,
+and flower pots across the room. They are more likely to appear near the top
+and bottom borders, but can occasionally appear in the center or along the
+outer border. Door approaches stay clear. Props block movement and shots, and
+enemies path around them.
+
 ## Requirements
 
 - Java 17 or newer
@@ -38,13 +45,14 @@ The game art is rendered from PNG sprites in
 - `characters/player`: the player walk frames
 - `characters/enemy`: the enemy walk frames
 - `environment`: floors, walls, and doors
-- `props`: pedestal and treasure rug
+- `props`: pedestal, treasure rug, and church prop spritesheet
 - `projectiles`: shot sprite
 - `effects`: melee attack slash sprite
 - `ui`: HUD bar sprites
 
-The build step above copies them into `out` so they are on the runtime
-classpath.
+The floor atlas contains four 40x40 tile variants, and the church prop atlas
+contains four 64x64 sprites. The build step above copies them into `out` so
+they are on the runtime classpath.
 
 ## Controls
 
@@ -62,11 +70,12 @@ not carry between rooms. Walking left from the start room leads to the item
 gallery; touch a pedestal's item to collect it.
 
 Some items add melee attacks, root enemies, leave damaging poison clouds, or
-grant a companion. The razorblade, headphones, and pocket item activate with
-**Space**. The HUD shows the held active item's recharge bar, which turns green
-when ready. The pocket item grants a random passive item and has a 15-second
-cooldown; the razorblade costs 5 HP per activation but cannot reduce the player
-below 1 HP. Melee attacks use the slash sprite at
+grant a companion. The razorblade, headphones, gelatin heart, and pocket item
+activate with **Space**. The HUD shows the held active item's recharge bar,
+which turns green when ready. The pocket item grants a random passive item and
+has a 15-second cooldown; the razorblade costs 5 HP per activation but cannot
+reduce the player below 1 HP; the gelatin heart heals 40 HP on a 20-second
+cooldown. Melee attacks use the slash sprite at
 `src/main/resources/sprites/effects/melee_slash.png`.
 
 ## Character attributes
