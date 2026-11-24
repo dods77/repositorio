@@ -133,8 +133,8 @@ public class PlayerCharacter extends CharacterEntity {
             return Room.Exit.RIGHT;
         }
 
-        x = Math.max(minX, Math.min(maxX, nextX));
-        y = nextY;
+        nextX = Math.max(minX, Math.min(maxX, nextX));
+        room.moveEntityWithin(this, nextX, nextY);
         return Room.Exit.NONE;
     }
 

@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Room {
@@ -32,6 +33,9 @@ public class Room {
     private static final int GALLERY_ITEM_LIFT = 18;
     private static final int GALLERY_LABEL_OFFSET = 60;
     private static final int GALLERY_LABEL_FONT_SIZE = 10;
+    private static final double CHURCH_PROP_CENTER_CHANCE = 0.10;
+    private static final double CHURCH_PROP_BORDER_CHANCE = 0.10;
+    private static final int CHURCH_PROP_SPACING = 28;
 
     private final int width;
     private final int height;
@@ -47,6 +51,8 @@ public class Room {
     private final List<PoisonCloud> poisonClouds = new ArrayList<>();
     private final BufferedImage background;
     private final List<ItemDisplay> itemDisplays = new ArrayList<>();
+    private final List<ChurchProp> churchProps = new ArrayList<>();
+    private final Random visualRandom;
     private double poisonSpawnCooldown;
 
     public Room(int width, int height, int number, RoomType type,
@@ -61,12 +67,14 @@ public class Room {
         this.leftDoor = leftDoor;
         this.rightDoor = rightDoor;
         this.player = player;
+        visualRandom = new Random(ThreadLocalRandom.current().nextLong());
         if (type == RoomType.TREASURE) {
             itemDisplays.add(new ItemDisplay(SchoolItem.randomTreasureItem(),
                     width / 2, height / 2 + 60));
         } else if (type == RoomType.GALLERY) {
             addGalleryItems(width, height);
         }
+        createChurchProps();
         double[][] spawnPoints = {
             {width * 0.82, height * 0.32},
             {width * 0.18, height * 0.32},
@@ -110,6 +118,10 @@ public class Room {
             double y = maximumY == minimumY
                     ? minimumY : random.nextDouble(minimumY, maximumY);
             Antonio candidate = new Antonio(x, y);
+            if (isObstacleBlockedAt(x, y, candidate.getWidth(),
+                    candidate.getHeight())) {
+                continue;
+            }
             double clearance = getAntonioSpawnClearance(candidate);
             if (clearance >= ANTONIO_SPAWN_CLEARANCE) {
                 return candidate;
@@ -119,7 +131,10 @@ public class Room {
                 bestClearance = clearance;
             }
         }
-        return bestCandidate;
+        if (bestCandidate != null) {
+            return bestCandidate;
+        }
+        return new Antonio(width / 2.0, height / 2.0 + 80);
     }
 
     private double getAntonioSpawnClearance(Antonio candidate) {
@@ -328,6 +343,9 @@ public class Room {
             double progress = (double) step / steps;
             double x = mover.getX() + horizontal * progress;
             double y = mover.getY() + vertical * progress;
+            if (isObstacleBlockedAt(x, y, mover.getWidth(), mover.getHeight())) {
+                return true;
+            }
             for (Gilberto other : gilbertos) {
                 if (other != mover && overlapsAt(x, y, mover, other)) {
                     return true;
@@ -360,6 +378,9 @@ public class Room {
         double y = gridCoordinate(row);
         if (x < mover.getWidth() / 2.0 || x > width - mover.getWidth() / 2.0
                 || y < mover.getHeight() / 2.0 || y > height - mover.getHeight() / 2.0) {
+            return true;
+        }
+        if (isObstacleBlockedAt(x, y, mover.getWidth(), mover.getHeight())) {
             return true;
         }
         for (Gilberto other : gilbertos) {
@@ -410,6 +431,32 @@ public class Room {
 
     private int clamp(int value, int minimum, int maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    boolean isObstacleBlockedAt(double x, double y, int entityWidth,
+            int entityHeight) {
+        for (ChurchProp prop : churchProps) {
+            if (Math.abs(x - prop.x) < (entityWidth + prop.collisionWidth) / 2.0
+                    && Math.abs(y - prop.y)
+                            < (entityHeight + prop.collisionHeight) / 2.0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void moveEntityWithin(GameEntity entity, double nextX, double nextY) {
+        double resolvedX = entity.getX();
+        double resolvedY = entity.getY();
+        if (!isObstacleBlockedAt(nextX, resolvedY,
+                entity.getWidth(), entity.getHeight())) {
+            resolvedX = nextX;
+        }
+        if (!isObstacleBlockedAt(resolvedX, nextY,
+                entity.getWidth(), entity.getHeight())) {
+            resolvedY = nextY;
+        }
+        entity.setPosition(resolvedX, resolvedY);
     }
 
     public static final class ItemDisplay {
@@ -518,7 +565,9 @@ public class Room {
         while (shotIterator.hasNext()) {
             Shot shot = shotIterator.next();
             shot.update(deltaSeconds);
-            if (shot.isOutside(this)) {
+            if (shot.isOutside(this)
+                    || isObstacleBlockedAt(shot.getX(), shot.getY(),
+                            shot.getWidth(), shot.getHeight())) {
                 shotIterator.remove();
                 continue;
             }
@@ -561,7 +610,9 @@ public class Room {
         while (enemyShotIterator.hasNext()) {
             EnemyShot enemyShot = enemyShotIterator.next();
             enemyShot.update(deltaSeconds);
-            if (enemyShot.isOutside(this)) {
+            if (enemyShot.isOutside(this)
+                    || isObstacleBlockedAt(enemyShot.getX(), enemyShot.getY(),
+                            enemyShot.getWidth(), enemyShot.getHeight())) {
                 enemyShotIterator.remove();
             } else if (overlaps(enemyShot, player)) {
                 player.takeDamage(enemyShot.getDamage());
@@ -704,6 +755,8 @@ public class Room {
 
         drawFloor(graphics);
         drawWalls(graphics);
+        drawDoors(graphics);
+        drawChurchProps(graphics);
         if (type == RoomType.TREASURE) {
             drawTreasureDecor(graphics);
         }
@@ -713,13 +766,133 @@ public class Room {
     }
 
     private void drawFloor(Graphics2D graphics) {
-        BufferedImage floor = type == RoomType.NORMAL
-                ? Sprites.FLOOR_NORMAL
-                : Sprites.FLOOR_TREASURE;
-        for (int y = 0; y < height; y += floor.getHeight()) {
-            for (int x = 0; x < width; x += floor.getWidth()) {
-                graphics.drawImage(floor, x, y, null);
+        int tileSize = Sprites.churchFloor(0).getWidth();
+        for (int y = 0; y < height; y += tileSize) {
+            for (int x = 0; x < width; x += tileSize) {
+                BufferedImage tile = Sprites.churchFloor(visualRandom.nextInt(4));
+                graphics.drawImage(tile, x, y, null);
             }
+        }
+    }
+
+    private void createChurchProps() {
+        if (type != RoomType.NORMAL || width < 360 || height < 300) {
+            return;
+        }
+
+        int pewCount = 4 + visualRandom.nextInt(3);
+        for (int index = 0; index < pewCount; index++) {
+            addRandomChurchProp(0, 58, 12);
+        }
+
+        addRandomChurchProp(1, 24, 24);
+        addRandomChurchProp(1, 24, 24);
+        int detailCount = 2 + visualRandom.nextInt(3);
+        for (int index = 0; index < detailCount; index++) {
+            int frame = visualRandom.nextBoolean() ? 2 : 3;
+            addRandomChurchProp(frame, 14, 14);
+        }
+    }
+
+    private void addRandomChurchProp(int frame, int collisionWidth,
+            int collisionHeight) {
+        for (int attempt = 0; attempt < 80; attempt++) {
+            Point2D.Double position = randomChurchPropPosition();
+            double x = position.x;
+            double y = position.y;
+            if (isNearDoorway(x, y, collisionHeight)
+                    || overlapsChurchProp(x, y, collisionWidth, collisionHeight)) {
+                continue;
+            }
+            addChurchProp(frame, x, y, collisionWidth, collisionHeight);
+            return;
+        }
+    }
+
+    private Point2D.Double randomChurchPropPosition() {
+        double wallInset = WALL_THICKNESS + 32;
+        double minimumX = Math.min(wallInset, width / 2.0);
+        double maximumX = Math.max(minimumX, width - wallInset);
+        double minimumY = Math.min(wallInset, height / 2.0);
+        double maximumY = Math.max(minimumY, height - wallInset);
+        double greenMinimumX = Math.max(minimumX, width * 0.08);
+        double greenMaximumX = Math.min(maximumX, width * 0.92);
+        double region = visualRandom.nextDouble();
+        double x;
+        double y;
+
+        if (region < CHURCH_PROP_CENTER_CHANCE) {
+            x = randomBetween(greenMinimumX, greenMaximumX);
+            y = randomBetween(height * 0.40, height * 0.60);
+        } else if (region < CHURCH_PROP_CENTER_CHANCE
+                + CHURCH_PROP_BORDER_CHANCE) {
+            int edge = visualRandom.nextInt(4);
+            if (edge < 2) {
+                x = randomBetween(minimumX, maximumX);
+                y = edge == 0
+                        ? randomBetween(minimumY, Math.min(height * 0.12, maximumY))
+                        : randomBetween(Math.min(maximumY,
+                                Math.max(height * 0.88, minimumY)),
+                                maximumY);
+            } else {
+                x = edge == 2
+                        ? randomBetween(minimumX, Math.min(width * 0.12, maximumX))
+                        : randomBetween(Math.min(maximumX,
+                                Math.max(width * 0.88, minimumX)), maximumX);
+                y = randomBetween(minimumY, maximumY);
+            }
+        } else {
+            x = randomBetween(greenMinimumX, greenMaximumX);
+            double bandStart = visualRandom.nextBoolean() ? 0.10 : 0.60;
+            y = randomBetween(Math.max(minimumY, height * bandStart),
+                    Math.min(maximumY, height * (bandStart + 0.30)));
+        }
+        return new Point2D.Double(x, y);
+    }
+
+    private double randomBetween(double minimum, double maximum) {
+        if (maximum <= minimum) {
+            return minimum;
+        }
+        return minimum + visualRandom.nextDouble() * (maximum - minimum);
+    }
+
+    private boolean isNearDoorway(double x, double y, int propHeight) {
+        boolean nearLeftDoor = leftDoor && x < width * 0.25;
+        boolean nearRightDoor = rightDoor && x > width * 0.75;
+        return (nearLeftDoor || nearRightDoor)
+                && Math.abs(y - height / 2.0)
+                        < DOOR_HALF_HEIGHT + propHeight / 2.0;
+    }
+
+    private boolean overlapsChurchProp(double x, double y, int propWidth,
+            int propHeight) {
+        for (ChurchProp prop : churchProps) {
+            if (Math.abs(x - prop.x)
+                            < (propWidth + prop.collisionWidth) / 2.0
+                                    + CHURCH_PROP_SPACING
+                    && Math.abs(y - prop.y)
+                            < (propHeight + prop.collisionHeight) / 2.0
+                                    + CHURCH_PROP_SPACING) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void addChurchProp(int frame, double x, double y,
+            int collisionWidth, int collisionHeight) {
+        churchProps.add(new ChurchProp(frame, x, y,
+                collisionWidth, collisionHeight));
+    }
+
+    private void drawChurchProps(Graphics2D graphics) {
+        for (ChurchProp prop : churchProps) {
+            BufferedImage sprite = Sprites.churchProp(prop.frame);
+            graphics.drawImage(sprite,
+                    (int) Math.round(prop.x - sprite.getWidth() / 2.0),
+                    (int) Math.round(prop.y - sprite.getHeight() / 2.0),
+                    null);
         }
     }
 
@@ -762,5 +935,22 @@ public class Room {
         graphics.drawImage(Sprites.PEDESTAL,
                 centerX - Sprites.PEDESTAL.getWidth() / 2,
                 centerY - Sprites.PEDESTAL.getHeight() / 2, null);
+    }
+
+    private static final class ChurchProp {
+        private final int frame;
+        private final double x;
+        private final double y;
+        private final int collisionWidth;
+        private final int collisionHeight;
+
+        private ChurchProp(int frame, double x, double y,
+                int collisionWidth, int collisionHeight) {
+            this.frame = frame;
+            this.x = x;
+            this.y = y;
+            this.collisionWidth = collisionWidth;
+            this.collisionHeight = collisionHeight;
+        }
     }
 }

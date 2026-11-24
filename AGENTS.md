@@ -64,16 +64,16 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
 | `Main.java` | Creates the Swing frame and `GamePanel`. |
 | `GamePanel.java` | Game loop, key bindings, HUD text/bars, room label, item info, cooldown bars. |
 | `Dungeon.java` | Builds the room list (gallery + 15 rooms), handles door transitions and room bookkeeping. |
-| `Room.java` | Per-room simulation and drawing: 16 px A* grid for enemies, shots, items, poison, prerendered background; also updates Antonio and enemy shots. |
+| `Room.java` | Per-room simulation and drawing: 16 px A* grid for enemies, church props and obstacle collisions, shots, items, poison, and prerendered background; also updates Antonio and enemy shots. |
 | `RoomType.java` | `NORMAL`, `TREASURE`, `GALLERY` (+ display names). |
 | `GameEntity.java` | Base: center position `x/y`, `width/height`, `setPosition`, abstract `update`/`draw`. |
-| `CharacterEntity.java` | Health, max health, move speed, damage, attack speed, movement clamping, stat mutations with validation. |
+| `CharacterEntity.java` | Health, max health, heal, move speed, damage, attack speed, movement clamping, stat mutations with validation. |
 | `PlayerCharacter.java` | Player stats/actions: shooting, active items, cooldowns, drone, cat, slash visuals. |
 | `Gilberto.java` | Enemy: chases via `Room.getNextWaypoint`, contact damage, sleep/root status, shot handling. |
 | `Antonio.java` | Ranged enemy: 1-3 per normal room, random spawn positions, approaches beyond firing range, no contact damage. |
 | `EnemyShot.java` | Antonio's projectile: deals damage to the player and disappears outside the room. |
 | `Shot.java` | Projectile: velocity, size, syringe/sleep/root flags, sprite drawing (`syringe` drawn pink). |
-| `SchoolItem.java` | Abstract item + 27 nested item classes, rarity, stat modifiers, special effects, random pools. |
+| `SchoolItem.java` | Abstract item + 33 nested item classes, rarity, stat modifiers, special effects, random pools. |
 | `CompanionCat.java` | Familiar that follows the player and melees nearby enemies (not a `GameEntity`). |
 | `DroneFamiliar.java` | Orbiting familiar that shoots the nearest enemy (not a `GameEntity`). |
 | `PoisonCloud.java` | Temporary poison area spawned by the Malagetas item. |
@@ -95,9 +95,13 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
   index by +/-1, and places the player just inside the opposite door.
 - `getRoomCount()` includes the gallery; use `getNumberedRoomCount()` for the
   "Room N / 15" HUD label.
-- `Room` prerenders floors/walls/doors/treasure decor once in `createBackground()`;
-  runtime drawing adds entities, items, and poison on top.
-- Gallery: 27 items in a centered 7-column grid (rows: 7/7/7/6), 64 px scaled
+- `Room` prerenders randomized church stone tiles, walls, doors, props, and
+  treasure decor once in `createBackground()`; normal rooms distribute solid
+  pews, pillars, candles, and planters across the room, favoring the upper and
+  lower areas while allowing occasional props in the center band and near the
+  perimeter. Door approaches stay clear. Props block movement, enemy paths,
+  and shots. Runtime drawing adds entities, items, and poison on top.
+- Gallery: 33 items in a centered 7-column grid (rows: 7/7/7/7/5), 64 px scaled
   pedestals, rarity-colored icon, 10 pt name label, vertical layout centered in
   the room. Items are collected on contact and do not respawn.
 
@@ -130,10 +134,10 @@ Rarity roll in `randomTreasureItem()`: 50% common, 30% uncommon, 15% rare,
 
 | Rarity | Items and effects |
 | --- | --- |
-| Comum | Caneta +2 damage; Lápis +10 speed; Borracha +0.5 attack/s; Mala cosmetic backpack; Gordura +20 max HP, -10% speed; Joelho fudido +25% damage, -10% speed; Óculos +50% projectile size, -10% speed, -20 max HP; Pantufas every 3 hits sleeps an enemy 2 s |
-| Incomum | Régua +3 damage; Caderno +20 speed; Lasagna pingodoçe +50% damage, -20 max HP; Halteres +50% damage; Katana active frontal slash; Cabelo shots root 2 s; Capoeira every 3rd shot does a 64 px spin at 1.5x damage; Malagetas leaves poison while walking; Familiar de IA cat companion |
-| Raro | Estojo +4 damage, +0.5 attack/s; Calculadora +1 damage, +1 attack/s; Pistola do Dred 2x damage, 0.6x attack speed; Token pirata no effect; SQL Injection 10% syringe instant kill; Familiar drone orbiting shooter; Razorblade +1 attack/s and paid slash; Fones shockwave; Bolso random item |
-| Lendário | Mochila +5 damage, +20 speed, +1 attack/s |
+| Comum | Caneta +2 damage; Lápis +10 speed; Borracha +0.5 attack/s; Mala cosmetic backpack; Gordura +20 max HP, -10% speed; Joelho fudido +25% damage, -10% speed; Óculos +50% projectile size, -10% speed, -20 max HP; Pantufas every 3 hits sleeps an enemy 2 s; Cebola da lancheira +1 attack/s; Cinto da ed. física +15 speed |
+| Incomum | Régua +3 damage; Caderno +20 speed; Lasagna pingodoçe +50% damage, -20 max HP; Halteres +50% damage; Katana active frontal slash; Cabelo shots root 2 s; Capoeira every 3rd shot does a 64 px spin at 1.5x damage; Malagetas leaves poison while walking; Familiar de IA cat companion; Marmita +25 max HP |
+| Raro | Estojo +4 damage, +0.5 attack/s; Calculadora +1 damage, +1 attack/s; Pistola do Dred 2x damage, 0.6x attack speed; Token pirata no effect; SQL Injection 10% syringe instant kill; Familiar drone orbiting shooter; Razorblade +1 attack/s and paid slash; Fones shockwave; Bolso random item; Bola de críquete +75% damage; Coração de gelatina active 40 HP heal |
+| Lendário | Mochila +5 damage, +20 speed, +1 attack/s; Cogumelo do lab +2 damage, +10 speed, +0.5 attack/s, +20 max HP |
 
 Active items (fired together by **Space**, each with its own cooldown):
 
@@ -143,6 +147,7 @@ Active items (fired together by **Space**, each with its own cooldown):
 | Razorblade | Frontal slash, 92 px range, 180° arc, 3x damage, costs 5 HP (never below 1) | 5 s |
 | Fones | Shockwave, 140 px radius, 2x damage | 8 s |
 | Bolso | Applies a random passive item from `randomPocketItem()` | 15 s |
+| Coração de gelatina | Heals 40 HP (clamped at max health) | 20 s |
 
 Other systems:
 
@@ -158,9 +163,9 @@ Other systems:
 
 Item pools:
 
-- `SchoolItem.allItems()`: all 27 items (used by the gallery).
+- `SchoolItem.allItems()`: all 33 items (used by the gallery).
 - `SchoolItem.randomTreasureItem()`: weighted rarity roll.
-- `SchoolItem.randomPocketItem()`: 16 passive items for Bolso.
+- `SchoolItem.randomPocketItem()`: 21 passive items for Bolso.
 - When adding an item: create the subclass, then add it to `randomTreasureItem()`
   and `allItems()` (and `randomPocketItem()` if it is passive).
 
@@ -170,17 +175,20 @@ Item pools:
 src/main/resources/sprites/
   characters/player/   player_{down,up,left,right}_{0,1}.png   32x32
   characters/enemy/    enemy_{down,up,left,right}_{0,1}.png    32x32
-  environment/         floor_normal.png, floor_treasure.png    40x40
+  environment/         church_floor.png                       2x2 tiles, 40x40
+                       floor_normal.png, floor_treasure.png    40x40
                        wall_horizontal.png                    40x20
                        wall_vertical.png                      20x40
                        door.png                               20x96
   props/               pedestal.png                           96x96
                        treasure_rug.png                       240x144
+                       church_props.png                       4x64x64
   projectiles/         shot.png                               16x16
   ui/                  hud_bar_background.png, hud_bar_fill.png 160x14
 ```
 
-- `Sprites` is package-private and static: constants for single images and
+- `Sprites` is package-private and static: constants for single images,
+  extracted church floor/prop sprite-sheet frames, and
   `EnumMap<Facing, BufferedImage[]>` for 2-frame walk cycles.
 - `Sprites.player(facing, frame)` / `Sprites.enemy(facing, frame)` wrap frames
   with `Math.floorMod`.
@@ -255,7 +263,8 @@ The images can then be inspected directly.
 - Door transitions are index-based, not number-based; the gallery is not
   numbered and must not be counted in "Room N / 15".
 - `Room.background` is cached at construction. Changes to floor/wall/door/
-  treasure-decor drawing need a new `Room` instance to show up.
+  church-prop/treasure-decor drawing need a new `Room` instance to show up;
+  randomized tile and prop choices stay fixed for that room instance.
 - Treasure items use `ItemDisplay` positions; gallery items are drawn at the
   same position with a pedestal sprite scaled to 64 px, while treasure decor is
   baked into the background.

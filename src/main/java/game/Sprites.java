@@ -13,10 +13,8 @@ final class Sprites {
     private static final Path SOURCE_SPRITES =
             Path.of("src", "main", "resources", "sprites");
 
-    static final BufferedImage FLOOR_NORMAL =
-            load("environment/floor_normal.png");
-    static final BufferedImage FLOOR_TREASURE =
-            load("environment/floor_treasure.png");
+    private static final BufferedImage[][] CHURCH_FLOOR_TILES =
+            loadSpriteSheet(load("environment/church_floor.png"), 40, 40);
     static final BufferedImage WALL_HORIZONTAL =
             load("environment/wall_horizontal.png");
     static final BufferedImage WALL_VERTICAL =
@@ -26,6 +24,8 @@ final class Sprites {
             load("environment/door_locked.png");
     static final BufferedImage PEDESTAL = load("props/pedestal.png");
     static final BufferedImage TREASURE_RUG = load("props/treasure_rug.png");
+    private static final BufferedImage[][] CHURCH_PROPS =
+            loadSpriteSheet(load("props/church_props.png"), 64, 64);
     static final BufferedImage SHOT = load("projectiles/shot.png");
     static final BufferedImage MELEE_SLASH = load("effects/melee_slash.png");
     static final BufferedImage HUD_BAR_BACKGROUND =
@@ -84,6 +84,40 @@ final class Sprites {
     static BufferedImage enemy(Facing facing, int frame) {
         BufferedImage[] frames = ENEMY_SPRITES.get(facing);
         return frames[Math.floorMod(frame, frames.length)];
+    }
+
+    static BufferedImage churchFloor(int frame) {
+        int tileCount = CHURCH_FLOOR_TILES.length
+                * CHURCH_FLOOR_TILES[0].length;
+        int index = Math.floorMod(frame, tileCount);
+        return CHURCH_FLOOR_TILES[index / CHURCH_FLOOR_TILES[0].length]
+                [index % CHURCH_FLOOR_TILES[0].length];
+    }
+
+    static BufferedImage churchProp(int frame) {
+        int tileCount = CHURCH_PROPS.length * CHURCH_PROPS[0].length;
+        int index = Math.floorMod(frame, tileCount);
+        return CHURCH_PROPS[index / CHURCH_PROPS[0].length]
+                [index % CHURCH_PROPS[0].length];
+    }
+
+    private static BufferedImage[][] loadSpriteSheet(BufferedImage sheet,
+            int tileWidth, int tileHeight) {
+        if (sheet.getWidth() % tileWidth != 0
+                || sheet.getHeight() % tileHeight != 0) {
+            throw new IllegalStateException("Sprite sheet dimensions must be "
+                    + "multiples of the tile size");
+        }
+        int columns = sheet.getWidth() / tileWidth;
+        int rows = sheet.getHeight() / tileHeight;
+        BufferedImage[][] tiles = new BufferedImage[rows][columns];
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                tiles[row][column] = sheet.getSubimage(column * tileWidth,
+                        row * tileHeight, tileWidth, tileHeight);
+            }
+        }
+        return tiles;
     }
 
     private static BufferedImage load(String name) {
