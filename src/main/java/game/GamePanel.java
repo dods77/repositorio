@@ -187,6 +187,7 @@ public final class GamePanel extends JPanel {
         }
         g.drawString("Shots in room: " + dungeon.getShotCount(), 16, 68);
         PlayerCharacter player = dungeon.getPlayer();
+        drawMagazineStatus(g, player);
         SchoolItem highlightedItem = currentRoom.getTreasureItem();
         boolean itemCollected = currentRoom.isTreasureItemCollected();
         if (highlightedItem == null) {
@@ -227,6 +228,33 @@ public final class GamePanel extends JPanel {
         drawItemCooldowns(g, player);
         g.dispose();
     }
+
+        private void drawMagazineStatus(Graphics2D graphics, PlayerCharacter player) {
+        int x = 210;
+        int y = 58;
+        int barWidth = 100;
+        int barHeight = 10;
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        graphics.setColor(Color.WHITE);
+        graphics.drawString("Staff " + player.getMagazineAmmo()
+            + "/" + player.getMagazineSize(), x, y + barHeight);
+        int barX = x + 72;
+        graphics.setColor(new Color(55, 55, 55));
+        graphics.fillRect(barX, y, barWidth, barHeight);
+        graphics.setColor(player.getOverheatCooldown() > 0
+            ? new Color(225, 75, 55)
+            : new Color(245, 175, 65));
+        graphics.fillRect(barX, y,
+            (int) Math.round(barWidth * player.getMagazineProgress()), barHeight);
+        graphics.setColor(Color.WHITE);
+        graphics.drawRect(barX, y, barWidth, barHeight);
+        if (player.getOverheatCooldown() > 0) {
+            double remaining = Math.ceil(player.getOverheatCooldown() * 10) / 10.0;
+            graphics.setColor(new Color(255, 125, 100));
+            graphics.drawString("OVERHEAT " + remaining + "s", barX + barWidth + 8,
+                y + barHeight);
+        }
+        }
 
     private void drawItemCooldowns(Graphics2D graphics, PlayerCharacter player) {
         int x = 16;

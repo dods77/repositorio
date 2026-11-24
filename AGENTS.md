@@ -52,6 +52,8 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
 ```
 
 - `GamePanel.tick()` clamps delta time to 0.05 s, updates the Dungeon, repaints.
+- Player staff uses an 8-shot regenerating magazine; exhausting it triggers a
+  2 s overheat lockout while the magazine recharges.
 - Input is a `Set<String>` of pressed keys; arrow keys set aim and auto-fire
   while held; **Space** fires active items once per key press.
 - `Dungeon` is index-based: `currentRoomIndex = 1` at startup (room 1); index 0
