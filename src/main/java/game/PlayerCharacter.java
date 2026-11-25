@@ -68,7 +68,7 @@ public class PlayerCharacter extends CharacterEntity {
     public int getMagazineAmmo() {
         return (int) Math.floor(magazineAmmo);
     }
-ssssssss
+
     public int getMagazineSize() {
         return MAGAZINE_SIZE;
     }
