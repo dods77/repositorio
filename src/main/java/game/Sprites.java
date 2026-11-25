@@ -28,6 +28,11 @@ final class Sprites {
             loadSpriteSheet(load("props/church_props.png"), 64, 64);
     static final BufferedImage SHOT = load("projectiles/shot.png");
     static final BufferedImage MELEE_SLASH = load("effects/melee_slash.png");
+    static final BufferedImage[] MELEE_SWING_FRAMES = {
+        load("effects/melee_swing_0.png"),
+        load("effects/melee_swing_1.png"),
+        load("effects/melee_swing_2.png")
+    };
     static final BufferedImage HUD_BAR_BACKGROUND =
             load("ui/hud_bar_background.png");
     static final BufferedImage HUD_BAR_FILL = load("ui/hud_bar_fill.png");

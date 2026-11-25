@@ -103,10 +103,9 @@ public abstract class SchoolItem {
                 new EstojoItem(), new CalculadoraItem(),
                 new PistolaDoDredItem(), new TokenPirataItem(),
                 new SqlInjectionItem(), new FamiliarDroneItem(),
-                new RazorbladeItem(), new FonesItem(), new BolsoItem(),
                 new MochilaItem(), new MarmitaItem(),
                 new CebolaDaLancheiraItem(), new CintoDaEdFisicaItem(),
-                new BolaDeCriqueteItem(), new CoracaoDeGelatinaItem(),
+                new BolaDeCriqueteItem(),
                 new CogumeloDoLabItem());
     }
 
@@ -129,8 +128,7 @@ public abstract class SchoolItem {
             return randomOf(new EstojoItem(), new CalculadoraItem(),
                     new PistolaDoDredItem(), new TokenPirataItem(),
                     new SqlInjectionItem(), new FamiliarDroneItem(),
-                    new RazorbladeItem(), new FonesItem(), new BolsoItem(),
-                    new BolaDeCriqueteItem(), new CoracaoDeGelatinaItem());
+                    new BolaDeCriqueteItem());
         }
         return randomOf(new MochilaItem(), new CogumeloDoLabItem());
     }
@@ -161,17 +159,6 @@ public abstract class SchoolItem {
     }
 
     public void applySpecialEffect(PlayerCharacter player) {
-    }
-
-    public boolean isActivatable() {
-        return false;
-    }
-
-    public double getCooldownSeconds() {
-        return 0;
-    }
-
-    public void activate(PlayerCharacter player, List<Gilberto> enemies) {
     }
 
     private static SchoolItem randomOf(SchoolItem... items) {
@@ -339,74 +326,6 @@ public abstract class SchoolItem {
         }
     }
 
-    public static final class RazorbladeItem extends SchoolItem {
-        public RazorbladeItem() {
-            super("Razorblade", Rarity.RARO,
-                    "+1 velocidade de ataque; ative para cortar à sua frente com custo de 5 HP",
-                    0, 0, 1);
-        }
-
-        @Override
-        public boolean isActivatable() {
-            return true;
-        }
-
-        @Override
-        public double getCooldownSeconds() {
-            return 5;
-        }
-
-        @Override
-        public void activate(PlayerCharacter player, List<Gilberto> enemies) {
-            player.useRazorblade(enemies);
-        }
-    }
-
-    public static final class FonesItem extends SchoolItem {
-        public FonesItem() {
-            super("Fones", Rarity.RARO, "Ative para causar uma onda de choque ao redor",
-                    0, 0, 0);
-        }
-
-        @Override
-        public boolean isActivatable() {
-            return true;
-        }
-
-        @Override
-        public double getCooldownSeconds() {
-            return 8;
-        }
-
-        @Override
-        public void activate(PlayerCharacter player, List<Gilberto> enemies) {
-            player.useShockwave(enemies);
-        }
-    }
-
-    public static final class BolsoItem extends SchoolItem {
-        public BolsoItem() {
-            super("Bolso", Rarity.RARO,
-                    "Ative para receber um item aleatório (recarga: 15 s)",
-                    0, 0, 0);
-        }
-
-        @Override
-        public boolean isActivatable() {
-            return true;
-        }
-
-        @Override
-        public double getCooldownSeconds() {
-            return 15;
-        }
-
-        @Override
-        public void activate(PlayerCharacter player, List<Gilberto> enemies) {
-            player.useRandomItemPocket();
-        }
-    }
-
     public static final class CabeloItem extends SchoolItem {
         public CabeloItem() {
             super("Cabelo", Rarity.INCOMUM,
@@ -485,47 +404,12 @@ public abstract class SchoolItem {
         }
     }
 
-    public static final class CoracaoDeGelatinaItem extends SchoolItem {
-        public CoracaoDeGelatinaItem() {
-            super("Coração de gelatina", Rarity.RARO,
-                    "Ative para recuperar 40 HP (recarga: 20 s)",
-                    0, 0, 0);
-        }
-
-        @Override
-        public boolean isActivatable() {
-            return true;
-        }
-
-        @Override
-        public double getCooldownSeconds() {
-            return 20;
-        }
-
-        @Override
-        public void activate(PlayerCharacter player, List<Gilberto> enemies) {
-            player.heal(40);
-        }
-    }
-
     public static final class CogumeloDoLabItem extends SchoolItem {
         public CogumeloDoLabItem() {
             super("Cogumelo do lab", Rarity.LENDARIO,
                     "+2 dano, +10 velocidade, +0,5 ataque e +20 HP máximo",
                     2, 10, 0.5, 1, 1, 1, 20, false);
         }
-    }
-
-    public static SchoolItem randomPocketItem() {
-        return randomOf(new CanetaItem(), new LapisItem(), new BorrachaItem(),
-                new ReguaItem(), new CadernoItem(), new EstojoItem(),
-                new CalculadoraItem(), new MochilaItem(), new GorduraItem(),
-                new JoelhoFudidoItem(), new LasagnaPingodoceItem(),
-                new HalteresItem(), new OculosItem(), new PantufasItem(),
-                new SqlInjectionItem(), new FamiliarDroneItem(),
-                new MarmitaItem(), new CebolaDaLancheiraItem(),
-                new CintoDaEdFisicaItem(), new BolaDeCriqueteItem(),
-                new CogumeloDoLabItem());
     }
 
     protected enum Rarity {

@@ -43,6 +43,10 @@ public final class GamePanel extends JPanel {
                     mouseShooting = true;
                     updateMousePosition(event);
                     requestFocusInWindow();
+                } else if (event.getButton() == MouseEvent.BUTTON3) {
+                    updateMousePosition(event);
+                    dungeon.meleeAttack(mouseX, mouseY);
+                    requestFocusInWindow();
                 }
             }
 
@@ -133,7 +137,7 @@ public final class GamePanel extends JPanel {
             if (pressed) {
                 boolean newlyPressed = pressedKeys.add(key);
                 if (newlyPressed && "SPACE".equals(key)) {
-                    dungeon.activateItems();
+                    dungeon.dash();
                 }
             } else {
                 pressedKeys.remove(key);
@@ -176,7 +180,7 @@ public final class GamePanel extends JPanel {
         g.drawString(roomText, ROOM_WIDTH - 16 - roomTextWidth, 26);
 
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-        g.drawString("Move: WASD    Shoot: arrows or hold left mouse    Active item: Space",
+        g.drawString("Move: WASD    Shoot: arrows or left mouse    Dash: Space    Melee: right mouse",
             16, 48);
         if (dungeon.getCurrentRoomType() == RoomType.TREASURE) {
             g.setColor(new Color(235, 205, 125));
@@ -225,7 +229,6 @@ public final class GamePanel extends JPanel {
                 + "    Damage: " + player.getDamage()
                 + "    Attack: " + player.getAttackSpeed() + " shots/s",
                 16, 118);
-        drawItemCooldowns(g, player);
         g.dispose();
     }
 
@@ -256,26 +259,4 @@ public final class GamePanel extends JPanel {
         }
         }
 
-    private void drawItemCooldowns(Graphics2D graphics, PlayerCharacter player) {
-        int x = 16;
-        int y = 164;
-        int barWidth = 140;
-        int barHeight = 10;
-        graphics.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        for (PlayerCharacter.ItemCooldown cooldown : player.getActiveItemCooldowns()) {
-            graphics.setColor(Color.WHITE);
-            graphics.drawString(cooldown.name(), x, y + barHeight - 1);
-            int currentBarX = x + 72;
-            graphics.setColor(new Color(65, 65, 65));
-            graphics.fillRect(currentBarX, y, barWidth, barHeight);
-            graphics.setColor(cooldown.progress() >= 1
-                    ? new Color(80, 205, 110)
-                    : new Color(85, 155, 220));
-            graphics.fillRect(currentBarX, y,
-                    (int) Math.round(barWidth * cooldown.progress()), barHeight);
-            graphics.setColor(Color.WHITE);
-            graphics.drawRect(currentBarX, y, barWidth, barHeight);
-            y += 17;
-        }
-    }
 }

@@ -6,8 +6,8 @@ The code is the source of truth; update this file when behavior changes.
 ## What this is
 
 "Little Room" is a small Java 2D top-down, room-based game inspired by The
-Binding of Isaac. One playable character, directional auto-fire, melee-style
-active items, familiars, and a linear dungeon of rooms with collectible school
+Binding of Isaac. One playable character, directional auto-fire, melee attacks,
+familiars, and a linear dungeon of rooms with collectible school
 items. Pure Java + Swing/AWT, no external dependencies, no build tool, no test
 framework.
 
@@ -35,7 +35,7 @@ java -cp out game.Main
 
 ```
 Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
-          |  reads pressed keys -> movement/aim/shoot/activate
+          |  reads keyboard/mouse input -> movement/aim/shoot/dash/melee
           v
        Dungeon (list of Room, currentRoomIndex, door transitions)
           |
@@ -48,14 +48,15 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
           |-- ItemDisplay (SchoolItem + position + collected flag)
           |-- PoisonCloud (damage-over-time area)
           v
-       PlayerCharacter (stats, shooting, active items, companions, sprites)
+       PlayerCharacter (stats, shooting, dash, melee, companions, sprites)
 ```
 
 - `GamePanel.tick()` clamps delta time to 0.05 s, updates the Dungeon, repaints.
-- Player staff uses an 8-shot regenerating magazine; exhausting it triggers a
-  2 s overheat lockout while the magazine recharges.
+- Player staff uses a 64-shot regenerating magazine; exhausting it triggers a
+  1 s overheat lockout while the magazine recharges.
 - Input is a `Set<String>` of pressed keys; arrow keys set aim and auto-fire
-  while held; **Space** fires active items once per key press.
+  while held; **Space** dashes once per key press; right mouse performs a
+  directional melee attack.
 - `Dungeon` is index-based: `currentRoomIndex = 1` at startup (room 1); index 0
   is the item gallery to its left.
 
@@ -64,18 +65,18 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
 | File | Responsibility |
 | --- | --- |
 | `Main.java` | Creates the Swing frame and `GamePanel`. |
-| `GamePanel.java` | Game loop, key bindings, HUD text/bars, room label, item info, cooldown bars. |
+| `GamePanel.java` | Game loop, keyboard/mouse bindings, HUD text/bars, room label, item info. |
 | `Dungeon.java` | Builds the room list (gallery + 15 rooms), handles door transitions and room bookkeeping. |
 | `Room.java` | Per-room simulation and drawing: 16 px A* grid for enemies, church props and obstacle collisions, shots, items, poison, and prerendered background; also updates Antonio and enemy shots. |
 | `RoomType.java` | `NORMAL`, `TREASURE`, `GALLERY` (+ display names). |
 | `GameEntity.java` | Base: center position `x/y`, `width/height`, `setPosition`, abstract `update`/`draw`. |
 | `CharacterEntity.java` | Health, max health, heal, move speed, damage, attack speed, movement clamping, stat mutations with validation. |
-| `PlayerCharacter.java` | Player stats/actions: shooting, active items, cooldowns, drone, cat, slash visuals. |
+| `PlayerCharacter.java` | Player stats/actions: shooting, dash, melee, drone, cat, slash visuals. |
 | `Gilberto.java` | Enemy: chases via `Room.getNextWaypoint`, contact damage, sleep/root status, shot handling. |
 | `Antonio.java` | Ranged enemy: 1-3 per normal room, random spawn positions, approaches beyond firing range, no contact damage. |
 | `EnemyShot.java` | Antonio's projectile: deals damage to the player and disappears outside the room. |
 | `Shot.java` | Projectile: velocity, size, syringe/sleep/root flags, sprite drawing (`syringe` drawn pink). |
-| `SchoolItem.java` | Abstract item + 33 nested item classes, rarity, stat modifiers, special effects, random pools. |
+| `SchoolItem.java` | Abstract item + 29 nested item classes, rarity, stat modifiers, special effects, random pools. |
 | `CompanionCat.java` | Familiar that follows the player and melees nearby enemies (not a `GameEntity`). |
 | `DroneFamiliar.java` | Orbiting familiar that shoots the nearest enemy (not a `GameEntity`). |
 | `PoisonCloud.java` | Temporary poison area spawned by the Malagetas item. |
@@ -103,7 +104,7 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
   lower areas while allowing occasional props in the center band and near the
   perimeter. Door approaches stay clear. Props block movement, enemy paths,
   and shots. Runtime drawing adds entities, items, and poison on top.
-- Gallery: 33 items in a centered 7-column grid (rows: 7/7/7/7/5), 64 px scaled
+- Gallery: 29 items in a centered 7-column grid (rows: 7/7/7/7/1), 64 px scaled
   pedestals, rarity-colored icon, 10 pt name label, vertical layout centered in
   the room. Items are collected on contact and do not respawn.
 
@@ -114,11 +115,15 @@ Main -> GamePanel (Swing Timer, 16 ms ~= 60 fps)
 | Size | 20x29 hitbox | 20x31 hitbox | 20x31 hitbox |
 | Health | 100 | 100 | 100 |
 | Move speed | 220 u/s | 165 u/s | 90 u/s when beyond range |
-| Damage | 10 per shot | 1 contact damage (1 s cooldown) | 1 per projectile |
+| Damage | 5 per shot | 1 contact damage (1 s cooldown) | 1 per projectile |
 | Attack speed | 3 shots/s | unused (3) | one shot every 1.25 s |
 
 - Shot: speed 420 u/s, default size 10 px (`SHOT_SIZE`), sprite drawn scaled.
 - Antonio approaches when farther than 350 px; `EnemyShot` speed is 260 u/s.
+- Dash: 550 u/s for 0.14 s, with a 0.75 s cooldown.
+- Right-click melee: 10x player damage, 80 px range, 120° arc, 0.22 s cooldown;
+  three large white-and-cyan slash frames follow the cursor direction. A kill
+  refills the magazine and clears overheat.
 - Room: 800x600; wall thickness 20; door half-height 48; A* cell size 16 px.
 - Walk animation runs at 8 fps (player) and 7 fps (enemy).
 - Damage is an `int`; movement/positions are `double`; entity coordinates are
@@ -137,19 +142,12 @@ Rarity roll in `randomTreasureItem()`: 50% common, 30% uncommon, 15% rare,
 | Rarity | Items and effects |
 | --- | --- |
 | Comum | Caneta +2 damage; Lápis +10 speed; Borracha +0.5 attack/s; Mala cosmetic backpack; Gordura +20 max HP, -10% speed; Joelho fudido +25% damage, -10% speed; Óculos +50% projectile size, -10% speed, -20 max HP; Pantufas every 3 hits sleeps an enemy 2 s; Cebola da lancheira +1 attack/s; Cinto da ed. física +15 speed |
-| Incomum | Régua +3 damage; Caderno +20 speed; Lasagna pingodoçe +50% damage, -20 max HP; Halteres +50% damage; Katana active frontal slash; Cabelo shots root 2 s; Capoeira every 3rd shot does a 64 px spin at 1.5x damage; Malagetas leaves poison while walking; Familiar de IA cat companion; Marmita +25 max HP |
-| Raro | Estojo +4 damage, +0.5 attack/s; Calculadora +1 damage, +1 attack/s; Pistola do Dred 2x damage, 0.6x attack speed; Token pirata no effect; SQL Injection 10% syringe instant kill; Familiar drone orbiting shooter; Razorblade +1 attack/s and paid slash; Fones shockwave; Bolso random item; Bola de críquete +75% damage; Coração de gelatina active 40 HP heal |
+| Incomum | Régua +3 damage; Caderno +20 speed; Lasagna pingodoçe +50% damage, -20 max HP; Halteres +50% damage; Katana replaces shots with directional slashes; Cabelo shots root 2 s; Capoeira every 3rd shot does a 64 px spin at 1.5x damage; Malagetas leaves poison while walking; Familiar de IA cat companion; Marmita +25 max HP |
+| Raro | Estojo +4 damage, +0.5 attack/s; Calculadora +1 damage, +1 attack/s; Pistola do Dred 2x damage, 0.6x attack speed; Token pirata no effect; SQL Injection 10% syringe instant kill; Familiar drone orbiting shooter; Bola de críquete +75% damage |
 | Lendário | Mochila +5 damage, +20 speed, +1 attack/s; Cogumelo do lab +2 damage, +10 speed, +0.5 attack/s, +20 max HP |
 
-Active items (fired together by **Space**, each with its own cooldown):
-
-| Item | Effect | Cooldown |
-| --- | --- | --- |
-| Katana | Animated directional sweep, 76 px range, 120° arc, player damage | 0.6 s |
-| Razorblade | Frontal slash, 92 px range, 180° arc, 3x damage, costs 5 HP (never below 1) | 5 s |
-| Fones | Shockwave, 140 px radius, 2x damage | 8 s |
-| Bolso | Applies a random passive item from `randomPocketItem()` | 15 s |
-| Coração de gelatina | Heals 40 HP (clamped at max health) | 20 s |
+All collectible items are passive upgrades. Space is the dash key; right-click
+performs a short directional melee attack, refilling the magazine on a kill.
 
 Other systems:
 
@@ -165,11 +163,10 @@ Other systems:
 
 Item pools:
 
-- `SchoolItem.allItems()`: all 33 items (used by the gallery).
+- `SchoolItem.allItems()`: all 29 items (used by the gallery).
 - `SchoolItem.randomTreasureItem()`: weighted rarity roll.
-- `SchoolItem.randomPocketItem()`: 21 passive items for Bolso.
 - When adding an item: create the subclass, then add it to `randomTreasureItem()`
-  and `allItems()` (and `randomPocketItem()` if it is passive).
+  and `allItems()`.
 
 ## Sprites and resource layout
 
@@ -186,6 +183,7 @@ src/main/resources/sprites/
                        treasure_rug.png                       240x144
                        church_props.png                       4x64x64
   projectiles/         shot.png                               16x16
+  effects/             melee_slash.png, melee_swing_{0,1,2}.png 96x96
   ui/                  hud_bar_background.png, hud_bar_fill.png 160x14
 ```
 
@@ -205,8 +203,7 @@ src/main/resources/sprites/
 Fixed coordinates in `GamePanel` (800x600): title (16,26); room label right
 aligned at x=784, y=26; controls y=48; room type right aligned y=48 (treasure
 only); shot count y=68; health bar at (16,82) using the 160x14 sprite; stats
-y=118; highlighted item line y=142; active-item cooldown bars starting at
-(16,164), 17 px per row, 140 px wide.
+y=118; highlighted item line y=142.
 
 The top ~150 px of the room is visually covered by HUD text, so keep important
 room content below it (the gallery grid starts around y=190 at 600 px height).
@@ -228,8 +225,6 @@ room content below it (the gallery grid starts around y=190 at 600 px height).
   grid adapts horizontally/vertically.
 - New room types: add to `RoomType`, handle in `Room` (constructor + background
   + draw), place it in `Dungeon`, and adjust the HUD label.
-- New active item: add cooldown field + trigger in `PlayerCharacter.activateItems`,
-  expose it in `getActiveItemCooldowns()` so the HUD shows a bar.
 - New companion: follow the `CompanionCat`/`DroneFamiliar` pattern: owned by
   `PlayerCharacter`, updated from `Room.update`, drawn from `PlayerCharacter.draw`.
 - README is player-facing; this file is agent-facing. Keep both current.
@@ -273,12 +268,7 @@ The images can then be inspected directly.
 - Item pickup is contact-based (within `player size/2 + 16`), including the
   gallery; walking through the gallery collects items.
 - Level transitions clear shots and poison clouds but not item effects.
-- The HUD activation key is **Space**; only the currently equipped activatable
-  item is triggered. Picking up another activatable item drops the old one.
-- The katana is not an activatable item: it replaces player shots with
-  directional melee attacks while an arrow key is held.
-- `SchoolItem` already declares `isActivatable()`, `getCooldownSeconds()`, and
-  `activate(player, enemies)`. The live activation path is
-  `GamePanel` -> `Dungeon.activateItems` -> `Room.activateItems` ->
-  `PlayerCharacter.activateItems`; the player owns the active-item slot and
-  its cooldown state.
+- **Space** triggers a dash; right mouse performs directional melee, and a
+  melee kill refills the staff magazine.
+- Katana replaces player shots with directional melee attacks while an arrow
+  key is held.

@@ -654,9 +654,11 @@ public class Room {
         player.draw(graphics);
     }
 
-    public void activateItems() {
-        player.activateItems(gilbertos);
+    public void meleeAttack(double targetX, double targetY) {
+        player.tryMeleeAttack(targetX - player.getX(), targetY - player.getY(),
+                gilbertos, antonios);
         gilbertos.removeIf(gilberto -> gilberto.getHealth() == 0);
+        antonios.removeIf(antonio -> antonio.getHealth() == 0);
     }
 
     private void updatePoisonTrail(double previousX, double previousY,
@@ -696,16 +698,8 @@ public class Room {
                     || Math.abs(player.getY() - display.getY()) > reachY) {
                 continue;
             }
-            SchoolItem droppedItem = player.collectItem(display.getItem());
+            player.collectItem(display.getItem());
             display.collected = true;
-            if (droppedItem != null) {
-                int direction = player.getX() < width / 2.0 ? 1 : -1;
-                double dropX = Math.max(WALL_THICKNESS + player.getWidth() / 2.0,
-                        Math.min(width - WALL_THICKNESS - player.getWidth() / 2.0,
-                                player.getX() + direction * 48));
-                itemDisplays.add(new ItemDisplay(droppedItem,
-                        (int) Math.round(dropX), (int) Math.round(player.getY())));
-            }
         }
     }
 

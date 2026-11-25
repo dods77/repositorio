@@ -60,30 +60,28 @@ they are on the runtime classpath.
 - **Hold arrow keys**: Shoot in that direction (combine two for diagonal shots);
   with the katana, slash in that direction instead
 - **Hold the left mouse button**: Aim at the cursor and shoot continuously
-- **Space**: Activate items that have an active ability
+- **Space**: Dash in your movement direction, or facing direction if standing still
+- **Right mouse button**: 10x-damage sweeping slash toward the cursor; defeating
+  an enemy with it refills the staff magazine
 
 The katana replaces ranged shots: hold an arrow key to swing in that direction.
-Picking up a different activatable item drops the currently held one nearby.
+Items are passive upgrades; there are no activatable items.
 
 Walk into the gap in the left or right wall to move to the next room. Shots do
 not carry between rooms. Walking left from the start room leads to the item
 gallery; touch a pedestal's item to collect it.
 
 Some items add melee attacks, root enemies, leave damaging poison clouds, or
-grant a companion. The razorblade, headphones, gelatin heart, and pocket item
-activate with **Space**. The HUD shows the held active item's recharge bar, which
-turns green when ready. The pocket item grants a random passive item and has a
-15-second cooldown; the razorblade costs 5 HP per activation but cannot reduce
-the player below 1 HP; the gelatin heart heals 40 HP on a 20-second cooldown.
-Melee attacks use an animated sweeping slash based on the sprite at
-`src/main/resources/sprites/effects/melee_slash.png`.
+grant a companion. The dash has a short cooldown. Right-click swings play three
+smaller, symmetric white-and-cyan slash frames quickly in the cursor direction.
 
 ## Character attributes
 
-The player starts with 100 HP, moves at 220 units per second, deals 10 damage
-per shot, and fires 3 shots per second. The staff has an infinite 8-shot
-magazine: it recharges while not firing and overheats for 2 seconds if emptied
-by continuous fire. HP, speed, damage, and attack speed
+The player starts with 100 HP, moves at 220 units per second, deals 5 damage
+per shot, and fires 3 shots per second. The staff has a 64-shot magazine that
+recharges at 16 shots per second and overheats for 1 second if emptied by
+continuous fire. A melee kill instantly refills the magazine and clears
+overheat. HP, speed, damage, and attack speed
 (shots per second) are reusable character attributes. Gilberto starts with
 100 HP, moves at 165 units per second, and deals 1 contact damage per second.
 Antonio has 100 HP, approaches at 90 units per second when the player is more

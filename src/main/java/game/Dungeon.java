@@ -68,8 +68,12 @@ public final class Dungeon {
         }
     }
 
-    public void activateItems() {
-        getCurrentRoom().activateItems();
+    public void dash() {
+        player.dash();
+    }
+
+    public void meleeAttack(double targetX, double targetY) {
+        getCurrentRoom().meleeAttack(targetX, targetY);
     }
 
     public void draw(Graphics2D graphics) {

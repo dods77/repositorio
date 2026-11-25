@@ -5,19 +5,25 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class PlayerCharacter extends CharacterEntity {
     private static final String NAME = "Isaacaias";
-    private static final int MAGAZINE_SIZE = 16;
-    private static final double MAGAZINE_RECHARGE_RATE = 4;
-    private static final double OVERHEAT_DURATION = 2;
+    private static final int MAGAZINE_SIZE = 64;
+    private static final double MAGAZINE_RECHARGE_RATE = 16;
+    private static final double OVERHEAT_DURATION = 1;
     private static final int SHOT_SIZE = 10;
     private static final double SHOT_SPEED = 420;
-    private static final double SLASH_DURATION = 0.24;
+    private static final double SLASH_DURATION = 0.18;
     private static final double KATANA_SWEEP_ANGLE = Math.PI * 2 / 3;
+    private static final double DASH_DURATION = 0.14;
+    private static final double DASH_COOLDOWN = 0.75;
+    private static final double DASH_SPEED = 550;
+    private static final double MELEE_COOLDOWN = 0.22;
+    private static final double MELEE_RANGE = 80;
+    private static final double MELEE_HALF_ANGLE = Math.PI / 3;
+    private static final int MELEE_DAMAGE_MULTIPLIER = 10;
 
     private double aimX = 1;
     private double aimY;
@@ -40,17 +46,21 @@ public class PlayerCharacter extends CharacterEntity {
     private boolean capoeiraSpinReady;
     private double rootDuration;
     private double katanaAttackCooldown;
-    private SchoolItem activeItem;
-    private double activeItemCooldown;
+    private double dashTimer;
+    private double dashCooldown;
+    private double dashX;
+    private double dashY;
+    private double meleeCooldown;
     private double slashTimer;
     private double slashStartAngle;
     private boolean spinningSlash;
+    private boolean whiteMeleeSlash;
     private Facing facing = Facing.DOWN;
     private double walkTime;
     private int walkFrame;
 
     public PlayerCharacter(double x, double y) {
-        super(x, y, 20, 29, 100, 220, 10, 3);
+        super(x, y, 20, 29, 100, 220, 5, 3);
     }
 
     public void setAim(double horizontal, double vertical) {
@@ -111,7 +121,8 @@ public class PlayerCharacter extends CharacterEntity {
             rechargeMagazine(deltaSeconds);
         }
         katanaAttackCooldown = Math.max(0, katanaAttackCooldown - deltaSeconds);
-        activeItemCooldown = Math.max(0, activeItemCooldown - deltaSeconds);
+        dashCooldown = Math.max(0, dashCooldown - deltaSeconds);
+        meleeCooldown = Math.max(0, meleeCooldown - deltaSeconds);
         slashTimer = Math.max(0, slashTimer - deltaSeconds);
 
         double facingX = shooting ? aimX : getMoveX();
@@ -136,8 +147,13 @@ public class PlayerCharacter extends CharacterEntity {
     public Room.Exit move(Room room, double deltaSeconds) {
         double halfWidth = width / 2.0;
         double halfHeight = height / 2.0;
-        double nextX = x + getMoveX() * getMoveSpeed() * deltaSeconds;
-        double nextY = y + getMoveY() * getMoveSpeed() * deltaSeconds;
+        double dashSeconds = Math.min(deltaSeconds, dashTimer);
+        double normalSeconds = deltaSeconds - dashSeconds;
+        double nextX = x + dashX * DASH_SPEED * dashSeconds
+                + getMoveX() * getMoveSpeed() * normalSeconds;
+        double nextY = y + dashY * DASH_SPEED * dashSeconds
+                + getMoveY() * getMoveSpeed() * normalSeconds;
+        dashTimer = Math.max(0, dashTimer - deltaSeconds);
         double minX = Room.WALL_THICKNESS + halfWidth;
         double maxX = room.getWidth() - Room.WALL_THICKNESS - halfWidth;
         double minY = Room.WALL_THICKNESS + halfHeight;
@@ -163,6 +179,38 @@ public class PlayerCharacter extends CharacterEntity {
         nextX = Math.max(minX, Math.min(maxX, nextX));
         room.moveEntityWithin(this, nextX, nextY);
         return Room.Exit.NONE;
+    }
+
+    public void dash() {
+        if (dashCooldown > 0) {
+            return;
+        }
+
+        double directionX = getMoveX();
+        double directionY = getMoveY();
+        if (Math.hypot(directionX, directionY) == 0) {
+            switch (facing) {
+                case DOWN:
+                    directionY = 1;
+                    break;
+                case UP:
+                    directionY = -1;
+                    break;
+                case LEFT:
+                    directionX = -1;
+                    break;
+                case RIGHT:
+                    directionX = 1;
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown facing direction");
+            }
+        }
+        double length = Math.hypot(directionX, directionY);
+        dashX = directionX / length;
+        dashY = directionY / length;
+        dashTimer = DASH_DURATION;
+        dashCooldown = DASH_COOLDOWN;
     }
 
     public Shot tryShoot() {
@@ -277,75 +325,14 @@ public class PlayerCharacter extends CharacterEntity {
         return ready;
     }
 
-    public void activateItems(List<Gilberto> enemies) {
-        if (activeItem != null && activeItemCooldown <= 0) {
-            activeItem.activate(this, enemies);
-            activeItemCooldown = activeItem.getCooldownSeconds();
-        }
-    }
-
-    void useRazorblade(List<Gilberto> enemies) {
-        if (getHealth() > 1) {
-            takeDamage(Math.min(5, getHealth() - 1));
-        }
-        attackForward(enemies, getDamage() * 3, 92, Math.PI / 2);
-        showSlash(false);
-    }
-
-    void useShockwave(List<Gilberto> enemies) {
-        for (Gilberto enemy : enemies) {
-            if (Math.hypot(enemy.getX() - x, enemy.getY() - y) <= 140) {
-                enemy.takeDamage(getDamage() * 2);
-            }
-        }
-    }
-
-    void useRandomItemPocket() {
-        applyItem(SchoolItem.randomPocketItem());
-    }
-
     public void updateCompanions(List<Gilberto> enemies, double deltaSeconds) {
         if (companionCat != null) {
             companionCat.update(this, enemies, deltaSeconds);
         }
     }
 
-    public List<ItemCooldown> getActiveItemCooldowns() {
-        List<ItemCooldown> cooldowns = new ArrayList<>();
-        if (activeItem != null) {
-            cooldowns.add(new ItemCooldown(activeItem.getDisplayName(),
-                    cooldownProgress(activeItemCooldown,
-                            activeItem.getCooldownSeconds())));
-        }
-        return cooldowns;
-    }
-
-    public SchoolItem getActiveItem() {
-        return activeItem;
-    }
-
-    public SchoolItem collectItem(SchoolItem item) {
-        if (!item.isActivatable()) {
-            applyItem(item);
-            return null;
-        }
-        if (activeItem != null && activeItem.getClass() == item.getClass()) {
-            return null;
-        }
-
-        SchoolItem droppedItem = activeItem;
-        if (droppedItem != null) {
-            removeActiveItemBonuses(droppedItem);
-        }
-        activeItem = item;
-        activeItemCooldown = 0;
-        applyItemBonuses(item);
-        item.applySpecialEffect(this);
-        return droppedItem;
-    }
-
-    private void removeActiveItemBonuses(SchoolItem item) {
-        decreaseAttackSpeed(item.getAttackSpeedBonus());
+    public void collectItem(SchoolItem item) {
+        applyItem(item);
     }
 
     public boolean tryKatanaAttack(List<Gilberto> enemies) {
@@ -358,20 +345,45 @@ public class PlayerCharacter extends CharacterEntity {
         return true;
     }
 
+    public boolean tryMeleeAttack(double horizontal, double vertical,
+            List<Gilberto> gilbertos, List<Antonio> antonios) {
+        if (Math.hypot(horizontal, vertical) == 0 || meleeCooldown > 0) {
+            return false;
+        }
+        setAim(horizontal, vertical);
+        meleeCooldown = MELEE_COOLDOWN;
+        int meleeDamage = getDamage() * MELEE_DAMAGE_MULTIPLIER;
+        boolean killedEnemy = attackForward(gilbertos, meleeDamage,
+                MELEE_RANGE, MELEE_HALF_ANGLE);
+        killedEnemy |= attackForward(antonios, meleeDamage,
+                MELEE_RANGE, MELEE_HALF_ANGLE);
+        showMeleeSlash(horizontal, vertical);
+        if (killedEnemy) {
+            magazineAmmo = MAGAZINE_SIZE;
+            overheatCooldown = 0;
+            shotCooldown = 0;
+        }
+        return killedEnemy;
+    }
+
     public void drawCompanions(Graphics2D graphics) {
         if (companionCat != null) {
             companionCat.draw(graphics);
         }
     }
 
-    private double cooldownProgress(double remaining, double duration) {
-        return Math.max(0, Math.min(1, 1 - remaining / duration));
-    }
-
     private void showSlash(boolean spin) {
         slashTimer = SLASH_DURATION;
         slashStartAngle = Math.atan2(aimY, aimX);
         spinningSlash = spin;
+        whiteMeleeSlash = false;
+    }
+
+    private void showMeleeSlash(double horizontal, double vertical) {
+        slashTimer = SLASH_DURATION;
+        slashStartAngle = Math.atan2(vertical, horizontal);
+        spinningSlash = false;
+        whiteMeleeSlash = true;
     }
 
     void showSpinningSlash() {
@@ -384,6 +396,11 @@ public class PlayerCharacter extends CharacterEntity {
         }
         Graphics2D slashGraphics = (Graphics2D) graphics.create();
         double progress = 1 - slashTimer / SLASH_DURATION;
+        if (whiteMeleeSlash) {
+            drawWhiteMeleeSlash(slashGraphics, progress);
+            slashGraphics.dispose();
+            return;
+        }
         double easedProgress = 1 - Math.pow(1 - progress, 3);
         float opacity = (float) (1 - progress * 0.55);
         double scale = 0.8 + 0.2 * easedProgress;
@@ -401,18 +418,33 @@ public class PlayerCharacter extends CharacterEntity {
         slashGraphics.dispose();
     }
 
-    private void attackForward(List<Gilberto> enemies, int damage,
+    private void drawWhiteMeleeSlash(Graphics2D graphics, double progress) {
+        int frameIndex = Math.min(Sprites.MELEE_SWING_FRAMES.length - 1,
+                (int) (progress * Sprites.MELEE_SWING_FRAMES.length));
+        BufferedImage frame = Sprites.MELEE_SWING_FRAMES[frameIndex];
+        graphics.translate(x, y);
+        graphics.rotate(slashStartAngle);
+        double scale = 0.76 + progress * 0.08;
+        graphics.scale(scale, scale);
+        graphics.drawImage(frame, -40, -80, null);
+    }
+
+    private boolean attackForward(List<? extends CharacterEntity> enemies, int damage,
             double range, double halfAngle) {
-        for (Gilberto enemy : enemies) {
+        boolean killedEnemy = false;
+        for (CharacterEntity enemy : enemies) {
             double offsetX = enemy.getX() - x;
             double offsetY = enemy.getY() - y;
             double distance = Math.hypot(offsetX, offsetY);
             if (distance <= range && distance > 0
                     && (aimX * offsetX + aimY * offsetY) / distance
                             >= Math.cos(halfAngle)) {
+                boolean wasAlive = enemy.getHealth() > 0;
                 enemy.takeDamage(damage);
+                killedEnemy |= wasAlive && enemy.getHealth() == 0;
             }
         }
+        return killedEnemy;
     }
 
     @Override
@@ -441,6 +473,4 @@ public class PlayerCharacter extends CharacterEntity {
         graphics.drawString(NAME, (int) Math.round(x) - nameWidth / 2, top - 5);
     }
 
-    public record ItemCooldown(String name, double progress) {
-    }
 }
