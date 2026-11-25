@@ -11,6 +11,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class PlayerCharacter extends CharacterEntity {
     private static final String NAME = "Isaacaias";
+    private static final int MAGAZINE_SIZE = 16;
+    private static final double MAGAZINE_RECHARGE_RATE = 4;
+    private static final double OVERHEAT_DURATION = 2;
     private static final int SHOT_SIZE = 10;
     private static final double SHOT_SPEED = 420;
     private static final double SLASH_DURATION = 0.24;
@@ -19,6 +22,8 @@ public class PlayerCharacter extends CharacterEntity {
     private double aimX = 1;
     private double aimY;
     private double shotCooldown;
+    private double magazineAmmo = MAGAZINE_SIZE;
+    private double overheatCooldown;
     private boolean shooting;
     private boolean hasBackpack;
     private int projectileSize = SHOT_SIZE;
@@ -60,6 +65,22 @@ public class PlayerCharacter extends CharacterEntity {
         this.shooting = shooting;
     }
 
+    public int getMagazineAmmo() {
+        return (int) Math.floor(magazineAmmo);
+    }
+
+    public int getMagazineSize() {
+        return MAGAZINE_SIZE;
+    }
+
+    public double getOverheatCooldown() {
+        return overheatCooldown;
+    }
+
+    public double getMagazineProgress() {
+        return magazineAmmo / MAGAZINE_SIZE;
+    }
+
     public void applyItem(SchoolItem item) {
         applyItemBonuses(item);
         hasBackpack |= item.hasBackpackCosmetic();
@@ -83,6 +104,12 @@ public class PlayerCharacter extends CharacterEntity {
     @Override
     public void update(double deltaSeconds) {
         shotCooldown = Math.max(0, shotCooldown - deltaSeconds);
+        if (overheatCooldown > 0) {
+            overheatCooldown = Math.max(0, overheatCooldown - deltaSeconds);
+            rechargeMagazine(deltaSeconds);
+        } else if (!shooting || hasKatana) {
+            rechargeMagazine(deltaSeconds);
+        }
         katanaAttackCooldown = Math.max(0, katanaAttackCooldown - deltaSeconds);
         activeItemCooldown = Math.max(0, activeItemCooldown - deltaSeconds);
         slashTimer = Math.max(0, slashTimer - deltaSeconds);
@@ -143,7 +170,14 @@ public class PlayerCharacter extends CharacterEntity {
             return null;
         }
 
+        if (overheatCooldown > 0 || magazineAmmo < 1) {
+            return null;
+        }
         shotCooldown = 0.00002 / getAttackSpeed();
+        magazineAmmo--;
+        if (magazineAmmo == 0) {
+            overheatCooldown = OVERHEAT_DURATION;
+        }
         double startX = x + aimX * (width / 2.0 + projectileSize);
         double startY = y + aimY * (height / 2.0 + projectileSize);
         boolean syringe = ThreadLocalRandom.current().nextDouble() < syringeChance;
@@ -153,6 +187,11 @@ public class PlayerCharacter extends CharacterEntity {
         }
         return new Shot(startX, startY, aimX * SHOT_SPEED, aimY * SHOT_SPEED,
                 projectileSize, syringe, sleepHitsPerEnemy > 0, hasRootShots);
+    }
+
+    private void rechargeMagazine(double deltaSeconds) {
+        magazineAmmo = Math.min(MAGAZINE_SIZE,
+                magazineAmmo + MAGAZINE_RECHARGE_RATE * deltaSeconds);
     }
 
     public Shot tryShootWithDrone(List<Gilberto> enemies, double deltaSeconds) {

@@ -81,7 +81,9 @@ Melee attacks use an animated sweeping slash based on the sprite at
 ## Character attributes
 
 The player starts with 100 HP, moves at 220 units per second, deals 10 damage
-per shot, and fires 3 shots per second. HP, speed, damage, and attack speed
+per shot, and fires 3 shots per second. The staff has an infinite 8-shot
+magazine: it recharges while not firing and overheats for 2 seconds if emptied
+by continuous fire. HP, speed, damage, and attack speed
 (shots per second) are reusable character attributes. Gilberto starts with
 100 HP, moves at 165 units per second, and deals 1 contact damage per second.
 Antonio has 100 HP, approaches at 90 units per second when the player is more
