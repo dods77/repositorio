@@ -11,8 +11,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class PlayerCharacter extends CharacterEntity {
     private static final String NAME = "Isaacaias";
-    private static final int MAGAZINE_SIZE = 16;
-    private static final double MAGAZINE_RECHARGE_RATE = 4;
+    private static final int MAGAZINE_SIZE = 64;
+    private static final double MAGAZINE_RECHARGE_RATE = 320000000;
     private static final double OVERHEAT_DURATION = 2;
     private static final int SHOT_SIZE = 10;
     private static final double SHOT_SPEED = 420;
@@ -68,7 +68,7 @@ public class PlayerCharacter extends CharacterEntity {
     public int getMagazineAmmo() {
         return (int) Math.floor(magazineAmmo);
     }
-
+ssssssss
     public int getMagazineSize() {
         return MAGAZINE_SIZE;
     }

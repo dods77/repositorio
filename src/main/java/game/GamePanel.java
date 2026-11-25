@@ -24,9 +24,16 @@ public final class GamePanel extends JPanel {
     private static final int ROOM_WIDTH = 800;
     private static final int ROOM_HEIGHT = 600;
 
+    private enum Screen {
+        MENU,
+        CONTROLS,
+        PLAYING
+    }
+
     private final Dungeon dungeon = new Dungeon(ROOM_WIDTH, ROOM_HEIGHT);
     private final Set<String> pressedKeys = new HashSet<>();
     private final Timer timer;
+    private Screen screen = Screen.MENU;
     private boolean mouseShooting;
     private int mouseX;
     private int mouseY;
@@ -39,10 +46,19 @@ public final class GamePanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent event) {
-                if (event.getButton() == MouseEvent.BUTTON1) {
+                if (event.getButton() != MouseEvent.BUTTON1) {
+                    return;
+                }
+                updateMousePosition(event);
+                requestFocusInWindow();
+                if (screen == Screen.MENU) {
+                    handleMenuClick(event.getX(), event.getY());
+                } else if (screen == Screen.CONTROLS) {
+                    if (getControlsBackBounds().contains(event.getPoint())) {
+                        screen = Screen.MENU;
+                    }
+                } else {
                     mouseShooting = true;
-                    updateMousePosition(event);
-                    requestFocusInWindow();
                 }
             }
 
@@ -74,6 +90,11 @@ public final class GamePanel extends JPanel {
         long now = System.nanoTime();
         double deltaSeconds = Math.min((now - previousFrameNanos) / 1_000_000_000.0, 0.05);
         previousFrameNanos = now;
+
+        if (screen != Screen.PLAYING) {
+            repaint();
+            return;
+        }
 
         PlayerCharacter player = dungeon.getPlayer();
         double horizontal = (isPressed("D") ? 1 : 0) - (isPressed("A") ? 1 : 0);
@@ -126,6 +147,20 @@ public final class GamePanel extends JPanel {
         bindKey("released RIGHT", "RIGHT", false);
         bindKey("pressed SPACE", "SPACE", true);
         bindKey("released SPACE", "SPACE", false);
+        bind("pressed ENTER", "ENTER", () -> {
+            if (screen == Screen.MENU) {
+                startPlaying();
+            }
+        });
+        bind("pressed ESCAPE", "ESCAPE", () -> {
+            if (screen == Screen.CONTROLS) {
+                screen = Screen.MENU;
+            } else if (screen == Screen.PLAYING) {
+                screen = Screen.MENU;
+                mouseShooting = false;
+                pressedKeys.clear();
+            }
+        });
     }
 
     private void bindKey(String keyStroke, String key, boolean pressed) {
@@ -162,6 +197,17 @@ public final class GamePanel extends JPanel {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                 RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
+        if (screen == Screen.MENU) {
+            drawMenu(g);
+            g.dispose();
+            return;
+        }
+        if (screen == Screen.CONTROLS) {
+            drawControlsScreen(g);
+            g.dispose();
+            return;
+        }
+
         dungeon.draw(g);
         g.setColor(Color.WHITE);
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
@@ -176,8 +222,6 @@ public final class GamePanel extends JPanel {
         g.drawString(roomText, ROOM_WIDTH - 16 - roomTextWidth, 26);
 
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-        g.drawString("Move: WASD    Shoot: arrows or hold left mouse    Active item: Space",
-            16, 48);
         if (dungeon.getCurrentRoomType() == RoomType.TREASURE) {
             g.setColor(new Color(235, 205, 125));
             String treasureText = dungeon.getCurrentRoomType().getDisplayName();
@@ -229,7 +273,145 @@ public final class GamePanel extends JPanel {
         g.dispose();
     }
 
-        private void drawMagazineStatus(Graphics2D graphics, PlayerCharacter player) {
+    private void drawMenu(Graphics2D graphics) {
+        Graphics2D g = (Graphics2D) graphics.create();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+
+        g.setColor(new Color(20, 28, 46));
+        g.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
+
+        g.setColor(new Color(76, 102, 126));
+        g.fillRect(0, ROOM_HEIGHT - 170, ROOM_WIDTH, 170);
+        g.setColor(new Color(104, 129, 150));
+        g.fillRect(0, ROOM_HEIGHT - 145, ROOM_WIDTH, 145);
+
+        g.setColor(new Color(235, 240, 224));
+        g.fillOval(ROOM_WIDTH / 2 - 155, 45, 310, 310);
+        g.setColor(new Color(199, 211, 208));
+        g.drawOval(ROOM_WIDTH / 2 - 155, 45, 310, 310);
+
+        g.setColor(new Color(205, 174, 104));
+        g.fillOval(ROOM_WIDTH / 2 - 39, 180, 78, 78);
+        g.setColor(new Color(238, 215, 152));
+        g.fillOval(ROOM_WIDTH / 2 - 25, 194, 50, 50);
+
+        g.setColor(new Color(230, 211, 158));
+        g.fillPolygon(new int[] {ROOM_WIDTH / 2 - 42, ROOM_WIDTH / 2,
+                        ROOM_WIDTH / 2 + 42},
+                new int[] {220, 145, 220}, 3);
+        g.setColor(new Color(75, 80, 88));
+        g.fillOval(ROOM_WIDTH / 2 - 11, 207, 7, 7);
+        g.fillOval(ROOM_WIDTH / 2 + 4, 207, 7, 7);
+
+        g.setFont(new Font("Serif", Font.BOLD, 54));
+        g.setColor(new Color(244, 226, 178));
+        String title = "ISAACAIAS";
+        int titleWidth = g.getFontMetrics().stringWidth(title);
+        g.drawString(title, ROOM_WIDTH / 2 - titleWidth / 2, 390);
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        g.setColor(new Color(210, 220, 218));
+        String subtitle = "O salao celestial aguarda";
+        int subtitleWidth = g.getFontMetrics().stringWidth(subtitle);
+        g.drawString(subtitle, ROOM_WIDTH / 2 - subtitleWidth / 2, 417);
+
+        drawMenuButton(g, "Jogar", 445);
+        drawMenuButton(g, "Controles", 492);
+        drawMenuButton(g, "Sair", 539);
+        g.dispose();
+    }
+
+    private void drawMenuButton(Graphics2D graphics, String label, int y) {
+        java.awt.Rectangle bounds = getMenuButtonBounds(y);
+        boolean hovered = bounds.contains(mouseX, mouseY);
+        graphics.setColor(hovered
+                ? new Color(230, 205, 145)
+                : new Color(53, 72, 88));
+        graphics.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 8, 8);
+        graphics.setColor(hovered
+                ? new Color(88, 96, 98)
+                : new Color(228, 218, 190));
+        graphics.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 8, 8);
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        int labelWidth = graphics.getFontMetrics().stringWidth(label);
+        graphics.drawString(label, ROOM_WIDTH / 2 - labelWidth / 2, y + 27);
+    }
+
+    private java.awt.Rectangle getMenuButtonBounds(int y) {
+        return new java.awt.Rectangle(300, y, 200, 38);
+    }
+
+    private java.awt.Rectangle getControlsBackBounds() {
+        return new java.awt.Rectangle(300, 515, 200, 38);
+    }
+
+    private void handleMenuClick(int x, int y) {
+        if (getMenuButtonBounds(445).contains(x, y)) {
+            startPlaying();
+        } else if (getMenuButtonBounds(492).contains(x, y)) {
+            screen = Screen.CONTROLS;
+        } else if (getMenuButtonBounds(539).contains(x, y)) {
+            javax.swing.SwingUtilities.getWindowAncestor(this).dispose();
+            System.exit(0);
+        }
+    }
+
+    private void startPlaying() {
+        screen = Screen.PLAYING;
+        pressedKeys.clear();
+        mouseShooting = false;
+        requestFocusInWindow();
+    }
+
+    private void drawControlsScreen(Graphics2D graphics) {
+        graphics.setColor(new Color(22, 30, 48));
+        graphics.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
+        graphics.setColor(new Color(238, 219, 165));
+        graphics.setFont(new Font("Serif", Font.BOLD, 42));
+        String title = "Controles";
+        int titleWidth = graphics.getFontMetrics().stringWidth(title);
+        graphics.drawString(title, ROOM_WIDTH / 2 - titleWidth / 2, 100);
+
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
+        graphics.setColor(new Color(220, 228, 225));
+        int y = 180;
+        drawControlRow(graphics, "W A S D", "Mover", y);
+        drawControlRow(graphics, "Setas", "Atirar ou usar katana", y += 48);
+        drawControlRow(graphics, "Botao esquerdo", "Mirar e atirar", y += 48);
+        drawControlRow(graphics, "Espaco", "Usar item ativo", y += 48);
+        drawControlRow(graphics, "Esc", "Voltar ao menu", y += 48);
+
+        java.awt.Rectangle backBounds = getControlsBackBounds();
+        boolean hovered = backBounds.contains(mouseX, mouseY);
+        graphics.setColor(hovered
+                ? new Color(230, 205, 145)
+                : new Color(53, 72, 88));
+        graphics.fillRoundRect(backBounds.x, backBounds.y,
+                backBounds.width, backBounds.height, 8, 8);
+        graphics.setColor(hovered
+                ? new Color(88, 96, 98)
+                : new Color(228, 218, 190));
+        graphics.drawRoundRect(backBounds.x, backBounds.y,
+                backBounds.width, backBounds.height, 8, 8);
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        String label = "Voltar";
+        int labelWidth = graphics.getFontMetrics().stringWidth(label);
+        graphics.drawString(label,
+                ROOM_WIDTH / 2 - labelWidth / 2, backBounds.y + 27);
+    }
+
+    private void drawControlRow(Graphics2D graphics, String key, String action,
+            int y) {
+        graphics.setFont(new Font(Font.MONOSPACED, Font.BOLD, 16));
+        graphics.setColor(new Color(238, 219, 165));
+        graphics.drawString(key, 205, y);
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
+        graphics.setColor(new Color(220, 228, 225));
+        graphics.drawString(action, 390, y);
+    }
+
+    private void drawMagazineStatus(Graphics2D graphics, PlayerCharacter player) {
         int x = 210;
         int y = 58;
         int barWidth = 100;
