@@ -24,9 +24,16 @@ public final class GamePanel extends JPanel {
     private static final int ROOM_WIDTH = 800;
     private static final int ROOM_HEIGHT = 600;
 
+    private enum Screen {
+        MENU,
+        CONTROLS,
+        PLAYING
+    }
+
     private final Dungeon dungeon = new Dungeon(ROOM_WIDTH, ROOM_HEIGHT);
     private final Set<String> pressedKeys = new HashSet<>();
     private final Timer timer;
+    private Screen screen = Screen.MENU;
     private boolean mouseShooting;
     private int mouseX;
     private int mouseY;
@@ -39,7 +46,18 @@ public final class GamePanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent event) {
-                if (event.getButton() == MouseEvent.BUTTON1) {
+                if (event.getButton() != MouseEvent.BUTTON1) {
+                    return;
+                }
+                updateMousePosition(event);
+                requestFocusInWindow();
+                if (screen == Screen.MENU) {
+                    handleMenuClick(event.getX(), event.getY());
+                } else if (screen == Screen.CONTROLS) {
+                    if (getControlsBackBounds().contains(event.getPoint())) {
+                        screen = Screen.MENU;
+                    }
+                } else {
                     mouseShooting = true;
                     updateMousePosition(event);
                     requestFocusInWindow();
@@ -78,6 +96,11 @@ public final class GamePanel extends JPanel {
         long now = System.nanoTime();
         double deltaSeconds = Math.min((now - previousFrameNanos) / 1_000_000_000.0, 0.05);
         previousFrameNanos = now;
+
+        if (screen != Screen.PLAYING) {
+            repaint();
+            return;
+        }
 
         PlayerCharacter player = dungeon.getPlayer();
         double horizontal = (isPressed("D") ? 1 : 0) - (isPressed("A") ? 1 : 0);
@@ -130,6 +153,20 @@ public final class GamePanel extends JPanel {
         bindKey("released RIGHT", "RIGHT", false);
         bindKey("pressed SPACE", "SPACE", true);
         bindKey("released SPACE", "SPACE", false);
+        bind("pressed ENTER", "ENTER", () -> {
+            if (screen == Screen.MENU) {
+                startPlaying();
+            }
+        });
+        bind("pressed ESCAPE", "ESCAPE", () -> {
+            if (screen == Screen.CONTROLS) {
+                screen = Screen.MENU;
+            } else if (screen == Screen.PLAYING) {
+                screen = Screen.MENU;
+                mouseShooting = false;
+                pressedKeys.clear();
+            }
+        });
     }
 
     private void bindKey(String keyStroke, String key, boolean pressed) {
@@ -165,6 +202,17 @@ public final class GamePanel extends JPanel {
                 RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                 RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+
+        if (screen == Screen.MENU) {
+            drawMenu(g);
+            g.dispose();
+            return;
+        }
+        if (screen == Screen.CONTROLS) {
+            drawControlsScreen(g);
+            g.dispose();
+            return;
+        }
 
         dungeon.draw(g);
         g.setColor(Color.WHITE);
@@ -232,7 +280,123 @@ public final class GamePanel extends JPanel {
         g.dispose();
     }
 
-        private void drawMagazineStatus(Graphics2D graphics, PlayerCharacter player) {
+    private void drawMenu(Graphics2D graphics) {
+        Graphics2D g = (Graphics2D) graphics.create();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+        dungeon.drawStartingRoomBackground(g);
+        g.setColor(new Color(14, 22, 34, 145));
+        g.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
+
+        g.setFont(new Font("Serif", Font.BOLD, 48));
+        g.setColor(new Color(244, 226, 178));
+        String title = "Isaacaias";
+        int titleWidth = g.getFontMetrics().stringWidth(title);
+        g.drawString(title, ROOM_WIDTH / 2 - titleWidth / 2, 210);
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        g.setColor(new Color(210, 220, 218));
+        String subtitle = "O salao celestial aguarda";
+        int subtitleWidth = g.getFontMetrics().stringWidth(subtitle);
+        g.drawString(subtitle, ROOM_WIDTH / 2 - subtitleWidth / 2, 238);
+
+        drawMenuButton(g, "Jogar", 300);
+        drawMenuButton(g, "Controles", 350);
+        drawMenuButton(g, "Sair", 400);
+        g.dispose();
+    }
+
+    private void drawMenuButton(Graphics2D graphics, String label, int y) {
+        java.awt.Rectangle bounds = getMenuButtonBounds(y);
+        boolean hovered = bounds.contains(mouseX, mouseY);
+        graphics.setColor(hovered
+                ? new Color(230, 205, 145)
+                : new Color(53, 72, 88));
+        graphics.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 8, 8);
+        graphics.setColor(hovered
+                ? new Color(88, 96, 98)
+                : new Color(228, 218, 190));
+        graphics.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 8, 8);
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        int labelWidth = graphics.getFontMetrics().stringWidth(label);
+        graphics.drawString(label, ROOM_WIDTH / 2 - labelWidth / 2, y + 27);
+    }
+
+    private java.awt.Rectangle getMenuButtonBounds(int y) {
+        return new java.awt.Rectangle(300, y, 200, 38);
+    }
+
+    private java.awt.Rectangle getControlsBackBounds() {
+        return new java.awt.Rectangle(300, 515, 200, 38);
+    }
+
+    private void handleMenuClick(int x, int y) {
+        if (getMenuButtonBounds(300).contains(x, y)) {
+            startPlaying();
+        } else if (getMenuButtonBounds(350).contains(x, y)) {
+            screen = Screen.CONTROLS;
+        } else if (getMenuButtonBounds(400).contains(x, y)) {
+            javax.swing.SwingUtilities.getWindowAncestor(this).dispose();
+            System.exit(0);
+        }
+    }
+
+    private void startPlaying() {
+        screen = Screen.PLAYING;
+        pressedKeys.clear();
+        mouseShooting = false;
+        requestFocusInWindow();
+    }
+
+    private void drawControlsScreen(Graphics2D graphics) {
+        dungeon.drawStartingRoomBackground(graphics);
+        graphics.setColor(new Color(14, 22, 34, 175));
+        graphics.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
+        graphics.setColor(new Color(238, 219, 165));
+        graphics.setFont(new Font("Serif", Font.BOLD, 42));
+        String title = "Controles";
+        int titleWidth = graphics.getFontMetrics().stringWidth(title);
+        graphics.drawString(title, ROOM_WIDTH / 2 - titleWidth / 2, 100);
+
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
+        graphics.setColor(new Color(220, 228, 225));
+        int y = 180;
+        drawControlRow(graphics, "W A S D", "Mover", y);
+        drawControlRow(graphics, "Setas", "Atirar ou usar katana", y += 48);
+        drawControlRow(graphics, "Botao esquerdo", "Mirar e atirar", y += 48);
+        drawControlRow(graphics, "Espaco", "Usar item ativo", y += 48);
+        drawControlRow(graphics, "Esc", "Voltar ao menu", y += 48);
+
+        java.awt.Rectangle backBounds = getControlsBackBounds();
+        boolean hovered = backBounds.contains(mouseX, mouseY);
+        graphics.setColor(hovered
+                ? new Color(230, 205, 145)
+                : new Color(53, 72, 88));
+        graphics.fillRoundRect(backBounds.x, backBounds.y,
+                backBounds.width, backBounds.height, 8, 8);
+        graphics.setColor(hovered
+                ? new Color(88, 96, 98)
+                : new Color(228, 218, 190));
+        graphics.drawRoundRect(backBounds.x, backBounds.y,
+                backBounds.width, backBounds.height, 8, 8);
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        String label = "Voltar";
+        int labelWidth = graphics.getFontMetrics().stringWidth(label);
+        graphics.drawString(label,
+                ROOM_WIDTH / 2 - labelWidth / 2, backBounds.y + 27);
+    }
+
+    private void drawControlRow(Graphics2D graphics, String key, String action,
+            int y) {
+        graphics.setFont(new Font(Font.MONOSPACED, Font.BOLD, 16));
+        graphics.setColor(new Color(238, 219, 165));
+        graphics.drawString(key, 205, y);
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
+        graphics.setColor(new Color(220, 228, 225));
+        graphics.drawString(action, 390, y);
+    }
+
+    private void drawMagazineStatus(Graphics2D graphics, PlayerCharacter player) {
         int x = 210;
         int y = 58;
         int barWidth = 100;
