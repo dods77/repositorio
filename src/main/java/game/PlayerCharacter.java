@@ -11,7 +11,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class PlayerCharacter extends CharacterEntity {
     private static final String NAME = "Isaacaias";
-    private static final int MAGAZINE_SIZE = 8;
+    private static final int MAGAZINE_SIZE = 16;
     private static final double MAGAZINE_RECHARGE_RATE = 4;
     private static final double OVERHEAT_DURATION = 2;
     private static final int SHOT_SIZE = 10;
