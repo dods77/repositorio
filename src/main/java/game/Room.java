@@ -622,9 +622,13 @@ public class Room {
         return Exit.NONE;
     }
 
-    public void draw(Graphics2D graphics) {
+    void drawBackground(Graphics2D graphics) {
         graphics.drawImage(background, 0, 0, null);
         drawDoors(graphics);
+    }
+
+    public void draw(Graphics2D graphics) {
+        drawBackground(graphics);
 
         for (PoisonCloud cloud : poisonClouds) {
             cloud.draw(graphics);

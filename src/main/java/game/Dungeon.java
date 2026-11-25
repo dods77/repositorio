@@ -76,6 +76,10 @@ public final class Dungeon {
         getCurrentRoom().draw(graphics);
     }
 
+    public void drawStartingRoomBackground(Graphics2D graphics) {
+        rooms.get(1).drawBackground(graphics);
+    }
+
     private void moveThroughDoor(Room.Exit exit) {
         if (!getCurrentRoom().areEnemiesDefeated()) {
             return;

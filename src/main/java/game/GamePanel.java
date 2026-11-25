@@ -277,48 +277,25 @@ public final class GamePanel extends JPanel {
         Graphics2D g = (Graphics2D) graphics.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
-
-        g.setColor(new Color(20, 28, 46));
+        dungeon.drawStartingRoomBackground(g);
+        g.setColor(new Color(14, 22, 34, 145));
         g.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
 
-        g.setColor(new Color(76, 102, 126));
-        g.fillRect(0, ROOM_HEIGHT - 170, ROOM_WIDTH, 170);
-        g.setColor(new Color(104, 129, 150));
-        g.fillRect(0, ROOM_HEIGHT - 145, ROOM_WIDTH, 145);
-
-        g.setColor(new Color(235, 240, 224));
-        g.fillOval(ROOM_WIDTH / 2 - 155, 45, 310, 310);
-        g.setColor(new Color(199, 211, 208));
-        g.drawOval(ROOM_WIDTH / 2 - 155, 45, 310, 310);
-
-        g.setColor(new Color(205, 174, 104));
-        g.fillOval(ROOM_WIDTH / 2 - 39, 180, 78, 78);
-        g.setColor(new Color(238, 215, 152));
-        g.fillOval(ROOM_WIDTH / 2 - 25, 194, 50, 50);
-
-        g.setColor(new Color(230, 211, 158));
-        g.fillPolygon(new int[] {ROOM_WIDTH / 2 - 42, ROOM_WIDTH / 2,
-                        ROOM_WIDTH / 2 + 42},
-                new int[] {220, 145, 220}, 3);
-        g.setColor(new Color(75, 80, 88));
-        g.fillOval(ROOM_WIDTH / 2 - 11, 207, 7, 7);
-        g.fillOval(ROOM_WIDTH / 2 + 4, 207, 7, 7);
-
-        g.setFont(new Font("Serif", Font.BOLD, 54));
+        g.setFont(new Font("Serif", Font.BOLD, 48));
         g.setColor(new Color(244, 226, 178));
-        String title = "ISAACAIAS";
+        String title = "Isaacaias";
         int titleWidth = g.getFontMetrics().stringWidth(title);
-        g.drawString(title, ROOM_WIDTH / 2 - titleWidth / 2, 390);
+        g.drawString(title, ROOM_WIDTH / 2 - titleWidth / 2, 210);
 
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         g.setColor(new Color(210, 220, 218));
         String subtitle = "O salao celestial aguarda";
         int subtitleWidth = g.getFontMetrics().stringWidth(subtitle);
-        g.drawString(subtitle, ROOM_WIDTH / 2 - subtitleWidth / 2, 417);
+        g.drawString(subtitle, ROOM_WIDTH / 2 - subtitleWidth / 2, 238);
 
-        drawMenuButton(g, "Jogar", 445);
-        drawMenuButton(g, "Controles", 492);
-        drawMenuButton(g, "Sair", 539);
+        drawMenuButton(g, "Jogar", 300);
+        drawMenuButton(g, "Controles", 350);
+        drawMenuButton(g, "Sair", 400);
         g.dispose();
     }
 
@@ -347,11 +324,11 @@ public final class GamePanel extends JPanel {
     }
 
     private void handleMenuClick(int x, int y) {
-        if (getMenuButtonBounds(445).contains(x, y)) {
+        if (getMenuButtonBounds(300).contains(x, y)) {
             startPlaying();
-        } else if (getMenuButtonBounds(492).contains(x, y)) {
+        } else if (getMenuButtonBounds(350).contains(x, y)) {
             screen = Screen.CONTROLS;
-        } else if (getMenuButtonBounds(539).contains(x, y)) {
+        } else if (getMenuButtonBounds(400).contains(x, y)) {
             javax.swing.SwingUtilities.getWindowAncestor(this).dispose();
             System.exit(0);
         }
@@ -365,7 +342,8 @@ public final class GamePanel extends JPanel {
     }
 
     private void drawControlsScreen(Graphics2D graphics) {
-        graphics.setColor(new Color(22, 30, 48));
+        dungeon.drawStartingRoomBackground(graphics);
+        graphics.setColor(new Color(14, 22, 34, 175));
         graphics.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
         graphics.setColor(new Color(238, 219, 165));
         graphics.setFont(new Font("Serif", Font.BOLD, 42));
